@@ -2547,6 +2547,18 @@ impl GooseAcpAgent {
                     "messageCount".to_string(),
                     serde_json::Value::Number(t.message_count.into()),
                 );
+                if let Some(ref provider_id) = t.metadata.provider_id {
+                    meta.insert(
+                        "providerId".to_string(),
+                        serde_json::Value::String(provider_id.clone()),
+                    );
+                }
+                if let Some(ref model_name) = t.metadata.model_name {
+                    meta.insert(
+                        "modelName".to_string(),
+                        serde_json::Value::String(model_name.clone()),
+                    );
+                }
                 SessionInfo::new(SessionId::new(t.id), cwd)
                     .title(t.name)
                     .updated_at(t.updated_at.to_rfc3339())
@@ -2616,6 +2628,18 @@ impl GooseAcpAgent {
             "messageCount".to_string(),
             serde_json::Value::Number(new_thread.message_count.into()),
         );
+        if let Some(ref provider_id) = new_thread.metadata.provider_id {
+            meta.insert(
+                "providerId".to_string(),
+                serde_json::Value::String(provider_id.clone()),
+            );
+        }
+        if let Some(ref model_name) = new_thread.metadata.model_name {
+            meta.insert(
+                "modelName".to_string(),
+                serde_json::Value::String(model_name.clone()),
+            );
+        }
 
         let mut response = ForkSessionResponse::new(SessionId::new(new_thread_id))
             .modes(mode_state)

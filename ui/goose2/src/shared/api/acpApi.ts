@@ -17,6 +17,8 @@ export interface AcpSessionInfo {
   title: string | null;
   updatedAt: string | null;
   messageCount: number;
+  providerId: string | null;
+  modelName: string | null;
 }
 
 const DEPRECATED_PROVIDER_IDS = new Set(["claude-code", "codex", "gemini-cli"]);
@@ -59,6 +61,8 @@ export async function listSessions(): Promise<AcpSessionInfo[]> {
       title: info.title ?? null,
       updatedAt: info.updatedAt ?? null,
       messageCount: (info._meta?.messageCount as number) ?? 0,
+      providerId: (info._meta?.providerId as string) ?? null,
+      modelName: (info._meta?.modelName as string) ?? null,
     }),
   );
 }
@@ -87,6 +91,8 @@ export async function forkSession(sessionId: string): Promise<AcpSessionInfo> {
     title: (response._meta?.title as string) ?? null,
     updatedAt: null,
     messageCount: (response._meta?.messageCount as number) ?? 0,
+    providerId: (response._meta?.providerId as string) ?? null,
+    modelName: (response._meta?.modelName as string) ?? null,
   };
 }
 

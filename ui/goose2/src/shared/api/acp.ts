@@ -161,6 +161,8 @@ export interface AcpSessionInfo {
   title: string | null;
   updatedAt: string | null;
   messageCount: number;
+  providerId: string | null;
+  modelName: string | null;
 }
 
 export interface AcpSessionSearchResult {

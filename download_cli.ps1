@@ -16,7 +16,7 @@
 #   $env:GOOSE_VERSION  - Optional: specific version to install (e.g., "v1.0.25"). Can be in the format vX.Y.Z, vX.Y.Z-suffix, or X.Y.Z
 #   $env:GOOSE_PROVIDER - Optional: provider for goose
 #   $env:GOOSE_MODEL    - Optional: model for goose
-#   $env:GOOSE_WINDOWS_VARIANT - Optional: Windows package variant to install ("standard" or "cuda")
+#   $env:GOOSE_WINDOWS_VARIANT - Optional: Windows package variant to install ("standard" for the Vulkan-enabled general-purpose build, or "cuda" for the NVIDIA-optimized build)
 #   $env:CANARY         - Optional: if set to "true", downloads from canary release instead of stable
 #   $env:CONFIGURE      - Optional: if set to "false", disables running goose configure interactively
 ##############################################################################

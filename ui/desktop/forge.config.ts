@@ -94,6 +94,8 @@ module.exports = {
         options: {
           icon: 'src/images/icon.png',
           prefix: '/opt',
+          depends: ['libvulkan1'],
+          recommends: ['mesa-vulkan-drivers | vulkan-icd'],
         },
       },
     },
@@ -109,6 +111,7 @@ module.exports = {
         options: {
           icon: 'src/images/icon.png',
           prefix: '/opt',
+          requires: ['vulkan-loader'],
           fpm: ['--rpm-rpmbuild-define', '_build_id_links none'],
         },
       },

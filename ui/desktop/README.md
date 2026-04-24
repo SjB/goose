@@ -21,17 +21,17 @@ For building on Linux distributions, you'll need additional system dependencies:
 
 **Debian/Ubuntu:**
 ```bash
-sudo apt install dpkg fakeroot
+sudo apt install dpkg fakeroot libvulkan-dev glslc
 ```
 
 **Arch/Manjaro:**
 ```bash
-sudo pacman -S dpkg fakeroot
+sudo pacman -S dpkg fakeroot vulkan-headers shaderc
 ```
 
 **Fedora/RHEL:**
 ```bash
-sudo dnf install dpkg-dev fakeroot
+sudo dnf install dpkg-dev fakeroot vulkan-loader-devel shaderc
 ```
 
 # Building notes
@@ -59,7 +59,7 @@ For Linux builds, first ensure you have the required system dependencies install
 1. Build the Rust backend:
 ```bash
 cd ../..  # Go to project root
-cargo build --release -p goose-server
+cargo build --release -p goose-server --features vulkan
 ```
 
 2. Copy the server binary to the expected location:
@@ -86,8 +86,10 @@ The built application will be available in:
 - Flatpak: `out/make/flatpak/x86_64/*.flatpak`
 - Executable: `out/goose-linux-x64/goose`
 
+The standard Linux build includes Vulkan local inference support. The packaged `.deb` and `.rpm` artifacts declare the Vulkan loader dependency, and building from source requires Vulkan development headers plus `glslc`.
+
 ### Windows
-Use the existing Windows build process as documented.
+Use the existing Windows build process as documented. The standard Windows build includes Vulkan local inference support, and the CUDA Windows variant includes both CUDA and Vulkan support. Building Windows artifacts with local inference support requires the Vulkan SDK to be installed and `VULKAN_SDK` to be set.
 
 
 # Running with goosed server from source

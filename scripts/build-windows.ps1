@@ -7,6 +7,7 @@
 #   - Rust (https://rustup.rs)
 #   - Node.js v24+ (https://nodejs.org)
 #   - pnpm: npm install -g pnpm
+#   - Vulkan SDK (https://vulkan.lunarg.com/sdk/home)
 #
 # Usage:
 #   cd C:\path\to\goose-fork
@@ -25,6 +26,7 @@ if (-not (Get-Command "cargo" -ErrorAction SilentlyContinue)) { $missing += "Rus
 if (-not (Get-Command "node" -ErrorAction SilentlyContinue)) { $missing += "Node.js v24+ (install from https://nodejs.org)" }
 if (-not (Get-Command "pnpm" -ErrorAction SilentlyContinue)) { $missing += "pnpm (run: npm install -g pnpm)" }
 if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) { $missing += "Git (install from https://git-scm.com)" }
+if (-not $env:VULKAN_SDK) { $missing += "Vulkan SDK (install from https://vulkan.lunarg.com/sdk/home and set VULKAN_SDK)" }
 
 if ($missing.Count -gt 0) {
     Write-Host "Missing prerequisites:" -ForegroundColor Red
@@ -42,7 +44,7 @@ Write-Host ""
 # Step 1: Clone or update repo
 Write-Host "[2/7] Building Rust backend (release)..." -ForegroundColor Yellow
 Write-Host "  This may take 5-15 minutes on first build..."
-cargo build --release -p goose-server
+cargo build --release -p goose-server --features vulkan
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Rust build failed!" -ForegroundColor Red
     exit 1

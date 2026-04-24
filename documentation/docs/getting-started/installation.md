@@ -98,6 +98,10 @@ import { PanelLeft } from 'lucide-react';
           3. Run `sudo dpkg -i (filename).deb`
           4. Launch goose from the app menu
 
+          :::info Linux Vulkan support
+          Linux Desktop packages now include Vulkan local inference support by default. The `.deb` and `.rpm` packages declare the Vulkan loader dependency, but you still need a working Vulkan-capable driver/ICD for GPU acceleration.
+          :::
+
           :::tip Updating goose
           It's best to periodically [update goose](/docs/guides/updating-goose).
           :::
@@ -116,6 +120,10 @@ import { PanelLeft } from 'lucide-react';
         ```sh
         curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash
         ```
+
+        :::info Linux Vulkan support
+        The standard Linux CLI build includes Vulkan local inference support. If you want GPU acceleration, install a Vulkan loader and a working Vulkan driver/ICD for your system.
+        :::
 
         :::tip Updating goose
         It's best to keep goose updated. To update goose, run:
@@ -142,7 +150,7 @@ import { PanelLeft } from 'lucide-react';
           2. Run the executable file to launch the goose Desktop application.
 
           :::info Windows variants
-          `Windows` is the standard general-purpose build. `Windows CUDA` is for NVIDIA GPUs with a compatible CUDA driver/runtime.
+          `Windows Vulkan` is the standard general-purpose build with Vulkan local inference support on supported GPUs. `Windows CUDA` is the NVIDIA-optimized variant for systems with a compatible CUDA driver/runtime.
           :::
 
           :::tip Updating goose
@@ -156,7 +164,7 @@ import { PanelLeft } from 'lucide-react';
         - **MSYS2**: Available from [msys2.org](https://www.msys2.org/)
         - **PowerShell**: Available on Windows 10/11 by default
 
-        Use the standard build for the general-purpose Windows install. Use the CUDA variant if you have an NVIDIA GPU with a compatible CUDA driver/runtime.
+        Use the standard build for the general-purpose Windows install with Vulkan local inference support on supported GPUs. Use the CUDA variant if you have an NVIDIA GPU with a compatible CUDA driver/runtime and want the NVIDIA-optimized build.
 
         **Git Bash / MSYS2: Standard**
 

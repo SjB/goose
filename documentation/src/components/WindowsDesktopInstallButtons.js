@@ -10,7 +10,7 @@ const WindowsDesktopInstallButtons = () => {
           className="button button--primary button--lg"
           to="https://github.com/aaif-goose/goose/releases/download/stable/Goose-win32-x64.zip"
         >
-          <IconDownload /> Windows
+          <IconDownload /> Windows Vulkan
         </Link>
         <Link
           className="button button--primary button--lg"

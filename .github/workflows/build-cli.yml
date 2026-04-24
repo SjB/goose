@@ -115,7 +115,11 @@ jobs:
           cross --version
 
           export CC="${{ matrix.cc || ''}}"
-          cross build --release --target ${TARGET} -p goose-cli
+          if [[ "${TARGET}" == *"unknown-linux-gnu" ]]; then
+            cross build --release --target ${TARGET} -p goose-cli --features vulkan
+          else
+            cross build --release --target ${TARGET} -p goose-cli
+          fi
 
       - name: Setup Rust (Windows)
         if: matrix.os == 'windows'
@@ -124,15 +128,24 @@ jobs:
           rustup show
           rustup target add x86_64-pc-windows-msvc
 
+      - name: Install Vulkan SDK (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          choco install vulkan-sdk --yes --no-progress
+          $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { throw "Vulkan SDK installation did not create C:\VulkanSDK" }
+          "VULKAN_SDK=$($sdk.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build CLI (Windows)
         if: matrix.os == 'windows'
         shell: bash
         run: |
           echo "🚀 Building Windows CLI executable..."
           if [ "${{ inputs.windows_variant }}" = "cuda" ]; then
-            cargo build --release --target x86_64-pc-windows-msvc -p goose-cli --features cuda
+            cargo build --release --target x86_64-pc-windows-msvc -p goose-cli --features "cuda vulkan"
           else
-            cargo build --release --target x86_64-pc-windows-msvc -p goose-cli
+            cargo build --release --target x86_64-pc-windows-msvc -p goose-cli --features vulkan
           fi
 
           if [ ! -f "./target/x86_64-pc-windows-msvc/release/goose.exe" ]; then

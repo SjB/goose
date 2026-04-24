@@ -64,6 +64,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
+            glslc \
             libnss3-dev \
             libatk-bridge2.0-dev \
             libdrm2 \
@@ -73,6 +74,7 @@ jobs:
             libgbm1 \
             libxss1 \
             libasound2t64 \
+            libvulkan-dev \
             rpm \
             fakeroot \
             dpkg-dev \
@@ -110,7 +112,7 @@ jobs:
           source ./bin/activate-hermit
           export TARGET="x86_64-unknown-linux-gnu"
           rustup target add "${TARGET}"
-          cross build --release --target ${TARGET} -p goose-server
+          cross build --release --target ${TARGET} -p goose-server --features vulkan
 
       - name: Copy binaries into Electron folder
         run: |

@@ -18,7 +18,7 @@ set -eu
 #   GOOSE_VERSION  - Optional: specific version to install (e.g., "v1.0.25"). Overrides CANARY. Can be in the format vX.Y.Z, vX.Y.Z-suffix, or X.Y.Z
 #   GOOSE_PROVIDER - Optional: provider for goose
 #   GOOSE_MODEL    - Optional: model for goose
-#   GOOSE_WINDOWS_VARIANT - Optional: Windows package variant to install (`standard` or `cuda`)
+#   GOOSE_WINDOWS_VARIANT - Optional: Windows package variant to install (`standard` for the Vulkan-enabled general-purpose build, or `cuda` for the NVIDIA-optimized build)
 #   CANARY         - Optional: if set to "true", downloads from canary release instead of stable
 #   CONFIGURE      - Optional: if set to "false", disables running goose configure interactively
 #   ** other provider specific environment variables (eg. DATABRICKS_HOST)

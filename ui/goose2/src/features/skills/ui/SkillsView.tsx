@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  AtSign,
+  ArrowRight,
+  ArrowUpDown,
+  List,
   Plus,
   Trash2,
   MoreHorizontal,
@@ -11,8 +13,8 @@ import {
   Upload,
 } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
-import { SearchBar } from "@/shared/ui/SearchBar";
 import { Button, buttonVariants } from "@/shared/ui/button";
+import { useSetTopBarActions } from "@/app/contexts/TopBarActionsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +41,16 @@ import {
   importSkills,
   type SkillInfo,
 } from "../api/skills";
+
+const TAG_PILL_COLORS = [
+  "var(--pill-pink)",
+  "var(--pill-olive)",
+  "var(--pill-blue)",
+] as const;
+
+function tagPillColor(index: number): string {
+  return TAG_PILL_COLORS[index % TAG_PILL_COLORS.length];
+}
 
 function SkillCardMenu({
   skill,
@@ -95,7 +107,7 @@ function SkillCardMenu({
 
 export function SkillsView() {
   const { t } = useTranslation(["skills", "common"]);
-  const [search, setSearch] = useState("");
+  const setTopBarActions = useSetTopBarActions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<
     { name: string; description: string; instructions: string } | undefined
@@ -208,10 +220,10 @@ export function SkillsView() {
     setEditingSkill(undefined);
   };
 
-  const handleNewSkill = () => {
+  const handleNewSkill = useCallback(() => {
     setEditingSkill(undefined);
     setDialogOpen(true);
-  };
+  }, []);
 
   const handleDropImport = useCallback(
     async (fileBytes: number[], fileName: string) => {
@@ -232,145 +244,170 @@ export function SkillsView() {
     handleFileChange: handleDropFileChange,
   } = useFileImportZone({ onImportFile: handleDropImport });
 
-  const filtered = skills.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.description.toLowerCase().includes(search.toLowerCase()),
-  );
+  useEffect(() => {
+    const pillCls =
+      "h-8 rounded-full bg-[var(--surface-button)] px-3 text-[14px] text-black/70 hover:bg-[var(--surface-button)]/80";
+    const iconBtnCls =
+      "h-8 w-9 rounded-full bg-[var(--surface-button)] p-0 text-black/70 hover:bg-[var(--surface-button)]/80";
+    setTopBarActions(
+      <>
+        <Button
+          type="button"
+          variant="ghost"
+          className={iconBtnCls}
+          aria-label={t("view.listView")}
+          /* i18n-check-ignore: aria-label resolved via t() above */
+          tabIndex={-1}
+        >
+          <List className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className={iconBtnCls}
+          aria-label={t("view.sort")}
+          /* i18n-check-ignore: aria-label resolved via t() above */
+          tabIndex={-1}
+        >
+          <ArrowUpDown className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className={pillCls}
+          onClick={() => importInputRef.current?.click()}
+        >
+          <Upload className="mr-2 size-4" />
+          {t("common:actions.import")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className={pillCls}
+          onClick={handleNewSkill}
+        >
+          <Plus className="mr-2 size-4" />
+          {t("view.newSkill")}
+        </Button>
+      </>,
+    );
+    return () => setTopBarActions(null);
+  }, [setTopBarActions, t, handleNewSkill]);
 
   return (
     <div className="flex flex-1 flex-col h-full min-h-0">
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-5 page-transition">
-          {/* Header */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-lg font-semibold font-display tracking-tight">
-                {t("view.title")}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {t("view.description")}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                ref={importInputRef}
-                type="file"
-                accept=".skill.json,.json"
-                className="hidden"
-                onChange={handleImportFile}
-              />
-              <Button
-                type="button"
-                variant="outline-flat"
-                size="xs"
-                onClick={() => importInputRef.current?.click()}
-              >
-                <Upload className="size-3.5" />
-                {t("common:actions.import")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline-flat"
-                size="xs"
-                onClick={handleNewSkill}
-              >
-                <Plus className="size-3.5" />
-                {t("view.newSkill")}
-              </Button>
-            </div>
-          </div>
-
-          {/* Search */}
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={t("view.searchPlaceholder")}
+      <div
+        className="flex-1 overflow-y-auto min-h-0 relative"
+        {...dropHandlers}
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 py-8 page-transition">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".skill.json,.json"
+            className="hidden"
+            onChange={handleImportFile}
           />
 
-          {/* Skills list */}
-          {!loading && filtered.length > 0 && (
-            <div className="space-y-2">
-              {filtered.map((skill) => (
-                <div
-                  key={skill.name}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{skill.name}</p>
-                    {skill.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {skill.description}
-                      </p>
-                    )}
-                  </div>
-                  <SkillCardMenu
-                    skill={skill}
-                    onEdit={handleEdit}
-                    onDuplicate={handleDuplicate}
-                    onExport={handleExport}
-                    onDelete={handleDelete}
-                  />
-                </div>
-              ))}
-
-              {/* New Skill card */}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleNewSkill}
-                {...dropHandlers}
-                className={cn(
-                  "h-auto w-full rounded-lg border border-dashed px-4 py-3 text-muted-foreground",
-                  isDragOver
-                    ? "border-ring bg-muted"
-                    : "border-border hover:border-border hover:bg-accent/50",
-                )}
-              >
-                <Plus className="size-4" />
-                <span className="text-sm">{t("view.newSkill")}</span>
-                <span className="ml-1 text-xs">{t("view.dropFile")}</span>
-              </Button>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!loading && filtered.length === 0 && (
-            <div
-              {...dropHandlers}
+          {/* Skills grid (always shows new-skill card; cards appear when present) */}
+          {!loading && (
+            <section
               className={cn(
-                "flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground rounded-lg border border-dashed transition-colors",
-                isDragOver ? "border-ring bg-muted" : "border-transparent",
+                "grid grid-cols-[repeat(auto-fill,260px)] gap-8 rounded-tile transition-colors",
+                isDragOver && "ring-2 ring-ring ring-offset-2",
               )}
             >
-              <AtSign className="h-10 w-10 opacity-30" />
-              <div className="text-center">
-                <p className="text-sm font-medium">
-                  {skills.length === 0
-                    ? t("view.emptyTitle")
-                    : t("view.noMatchesTitle")}
+              {/* New-skill empty state — always first */}
+              <div className="group relative h-[260px] w-[260px] overflow-hidden rounded-tile bg-[var(--surface-tile)] p-5">
+                <span className="inline-flex h-5 items-center rounded-full bg-[var(--pill-neutral)] px-[6px] pb-[3px] text-[14px] text-[var(--text-title-alex)]">
+                  {/* i18n-check-ignore: visual placeholder pill mirroring the kebab-case skill-name pattern, not user copy */}
+                  new-skill
+                </span>
+                <p className="mt-8 text-[16px] leading-[20px] text-[var(--text-muted-alex)]">
+                  {t("view.newSkillEmptyExample")}{" "}
+                  <em className="italic">
+                    {t("view.newSkillEmptyExampleQuote")}
+                  </em>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {skills.length === 0
-                    ? t("view.emptyDescription")
-                    : t("view.noMatchesDescription")}
-                </p>
-              </div>
-              {skills.length === 0 && (
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="xs"
                   onClick={handleNewSkill}
-                  className="mt-2"
+                  className="absolute bottom-4 right-4 flex h-8 w-10 items-center justify-center rounded-full bg-[var(--surface-install)]"
+                  aria-label={t("view.newSkill")}
                 >
-                  <Plus className="size-3.5" />
-                  {t("view.newSkill")}
-                </Button>
-              )}
-            </div>
+                  <ArrowRight className="size-4 text-black/70" />
+                </button>
+              </div>
+
+              {skills.map((skill, index) => (
+                <div
+                  key={skill.name}
+                  className="group relative h-[260px] w-[260px] overflow-hidden rounded-tile bg-[var(--surface-tile)] p-5"
+                >
+                  <span
+                    className="inline-flex h-5 items-center rounded-full px-[6px] pb-[3px] text-[14px] text-[var(--text-title-alex)]"
+                    style={{ backgroundColor: tagPillColor(index) }}
+                  >
+                    {skill.name}
+                  </span>
+
+                  <p
+                    className="mt-8 text-[16px] leading-[20px] text-[var(--text-muted-alex)]"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 7,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {skill.description}
+                  </p>
+
+                  {/* Hover-only Install — visual placeholder; no real install flow exists for user-created skills */}
+                  <button
+                    type="button"
+                    className="absolute bottom-4 right-4 hidden h-8 rounded-full bg-[var(--surface-install)] px-3 text-[14px] text-black/70 group-hover:inline-flex group-hover:items-center"
+                    /* i18n-check-ignore: decorative placeholder button — no real install flow */
+                    aria-label={`Install ${skill.name} (placeholder)`}
+                    tabIndex={-1}
+                  >
+                    {/* i18n-check-ignore: decorative placeholder button — no real install flow */}
+                    Install
+                  </button>
+
+                  {/* Existing menu, hover-revealed */}
+                  <div className="absolute right-4 top-4 hidden group-hover:block">
+                    <SkillCardMenu
+                      skill={skill}
+                      onEdit={handleEdit}
+                      onDuplicate={handleDuplicate}
+                      onExport={handleExport}
+                      onDelete={handleDelete}
+                    />
+                  </div>
+                </div>
+              ))}
+            </section>
           )}
         </div>
+
+        {/* Bottom fade — gradient mask makes the blur itself ramp in
+            so cards near the top of the fade region stay clean and
+            blur progressively as content approaches the composer */}
+        <div
+          className="pointer-events-none sticky bottom-0 left-0 h-64 w-full"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(222,222,222,0) 0%, var(--canvas) 100%)",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)",
+            maskImage:
+              "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 50%, black 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 50%, black 100%)",
+          }}
+          aria-hidden="true"
+        />
       </div>
 
       {/* Hidden file input for drag-and-drop import */}

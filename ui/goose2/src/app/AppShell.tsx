@@ -8,6 +8,7 @@ import { SettingsModal } from "@/features/settings/ui/SettingsModal";
 import type { SectionId } from "@/features/settings/ui/SettingsModal";
 import { OPEN_SETTINGS_EVENT } from "@/features/settings/lib/settingsEvents";
 import { TopBar } from "./ui/TopBar";
+import { TopBarActionsProvider } from "./contexts/TopBarActionsContext";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import {
   type ChatSession,
@@ -657,114 +658,119 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-dot-grid text-[var(--text-default-alex)]">
-      <TopBar onSettingsClick={() => openSettings()} activeView={activeView} />
+    <TopBarActionsProvider>
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-dot-grid text-[var(--text-default-alex)]">
+        <TopBar
+          onSettingsClick={() => openSettings()}
+          activeView={activeView}
+        />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div
-          className="flex-shrink-0 h-full py-3 pl-3"
-          style={{
-            width: sidebarCollapsed
-              ? SIDEBAR_COLLAPSED_WIDTH + 12
-              : sidebarWidth + 12,
-            transition: isResizing ? "none" : "width 200ms ease-out",
-          }}
-        >
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            width={sidebarWidth}
-            isResizing={isResizing}
-            onCollapse={toggleSidebar}
-            onNavigate={handleNavigate}
-            onNewChatInProject={handleNewChatInProject}
-            onNewChat={() => {
-              sessionStore.setActiveSession(null);
-              setActiveView("home");
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div
+            className="flex-shrink-0 h-full py-3 pl-3"
+            style={{
+              width: sidebarCollapsed
+                ? SIDEBAR_COLLAPSED_WIDTH + 12
+                : sidebarWidth + 12,
+              transition: isResizing ? "none" : "width 200ms ease-out",
             }}
-            onCreateProject={() => openCreateProjectDialog()}
-            onEditProject={handleEditProject}
-            onArchiveProject={handleArchiveProject}
-            onArchiveChat={handleArchiveChat}
-            onRenameChat={handleRenameChat}
-            onMoveToProject={handleMoveToProject}
-            onReorderProject={projectStore.reorderProjects}
-            onSelectSession={handleSelectSession}
-            onSelectSearchResult={handleSelectSearchResult}
-            activeView={activeView}
-            activeSessionId={activeSessionId}
-            projects={projectStore.projects}
-            className="h-full rounded-xl"
+          >
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              width={sidebarWidth}
+              isResizing={isResizing}
+              onCollapse={toggleSidebar}
+              onNavigate={handleNavigate}
+              onNewChatInProject={handleNewChatInProject}
+              onNewChat={() => {
+                sessionStore.setActiveSession(null);
+                setActiveView("home");
+              }}
+              onCreateProject={() => openCreateProjectDialog()}
+              onEditProject={handleEditProject}
+              onArchiveProject={handleArchiveProject}
+              onArchiveChat={handleArchiveChat}
+              onRenameChat={handleRenameChat}
+              onMoveToProject={handleMoveToProject}
+              onReorderProject={projectStore.reorderProjects}
+              onSelectSession={handleSelectSession}
+              onSelectSearchResult={handleSelectSearchResult}
+              activeView={activeView}
+              activeSessionId={activeSessionId}
+              projects={projectStore.projects}
+              className="h-full rounded-xl"
+            />
+          </div>
+
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle for sidebar resize */}
+          <div
+            onMouseDown={handleResizeStart}
+            onDoubleClick={handleResizeDoubleClick}
+            className="flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
+          >
+            <div className="w-px h-8 rounded-full bg-transparent group-hover:bg-border transition-colors" />
+          </div>
+
+          <main className="min-h-0 min-w-0 flex-1">
+            {children ?? (
+              <AppShellContent
+                activeView={activeView}
+                activeSession={activeSession}
+                homeSessionId={homeSessionId}
+                onCreatePersona={handleCreatePersona}
+                onArchiveChat={handleArchiveChat}
+                onCreateProject={openCreateProjectDialog}
+                onActivateHomeSession={activateHomeSession}
+                onRenameChat={handleRenameChat}
+                onSelectSession={handleSelectSession}
+                onSelectSearchResult={handleSelectSearchResult}
+                onStartChatFromProject={handleStartChatFromProject}
+              />
+            )}
+          </main>
+        </div>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
+          }`}
+        >
+          <StatusBar
+            modelName={modelName}
+            sessionId={activeSessionId ?? undefined}
+            tokenCount={tokenCount}
           />
         </div>
 
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle for sidebar resize */}
-        <div
-          onMouseDown={handleResizeStart}
-          onDoubleClick={handleResizeDoubleClick}
-          className="flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
-        >
-          <div className="w-px h-8 rounded-full bg-transparent group-hover:bg-border transition-colors" />
-        </div>
+        {settingsOpen && (
+          <SettingsModal
+            initialSection={settingsInitialSection}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
 
-        <main className="min-h-0 min-w-0 flex-1">
-          {children ?? (
-            <AppShellContent
-              activeView={activeView}
-              activeSession={activeSession}
-              homeSessionId={homeSessionId}
-              onCreatePersona={handleCreatePersona}
-              onArchiveChat={handleArchiveChat}
-              onCreateProject={openCreateProjectDialog}
-              onActivateHomeSession={activateHomeSession}
-              onRenameChat={handleRenameChat}
-              onSelectSession={handleSelectSession}
-              onSelectSearchResult={handleSelectSearchResult}
-              onStartChatFromProject={handleStartChatFromProject}
-            />
-          )}
-        </main>
-      </div>
-
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
-        }`}
-      >
-        <StatusBar
-          modelName={modelName}
-          sessionId={activeSessionId ?? undefined}
-          tokenCount={tokenCount}
+        <CreateProjectDialog
+          isOpen={createProjectOpen}
+          onClose={() => {
+            setCreateProjectOpen(false);
+            setEditingProject(null);
+            setCreateProjectInitialWorkingDir(null);
+            pendingProjectCreatedRef.current = null;
+          }}
+          onCreated={(project) => {
+            projectStore.fetchProjects();
+            pendingProjectCreatedRef.current?.(project.id);
+            pendingProjectCreatedRef.current = null;
+            setCreateProjectInitialWorkingDir(null);
+          }}
+          initialWorkingDir={createProjectInitialWorkingDir}
+          editingProject={editingProjectProp}
         />
+
+        {activeView !== "chat" && (
+          <GlobalComposerPill onSend={handleGlobalCompose} />
+        )}
       </div>
-
-      {settingsOpen && (
-        <SettingsModal
-          initialSection={settingsInitialSection}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
-
-      <CreateProjectDialog
-        isOpen={createProjectOpen}
-        onClose={() => {
-          setCreateProjectOpen(false);
-          setEditingProject(null);
-          setCreateProjectInitialWorkingDir(null);
-          pendingProjectCreatedRef.current = null;
-        }}
-        onCreated={(project) => {
-          projectStore.fetchProjects();
-          pendingProjectCreatedRef.current?.(project.id);
-          pendingProjectCreatedRef.current = null;
-          setCreateProjectInitialWorkingDir(null);
-        }}
-        initialWorkingDir={createProjectInitialWorkingDir}
-        editingProject={editingProjectProp}
-      />
-
-      {activeView !== "chat" && (
-        <GlobalComposerPill onSend={handleGlobalCompose} />
-      )}
-    </div>
+    </TopBarActionsProvider>
   );
 }

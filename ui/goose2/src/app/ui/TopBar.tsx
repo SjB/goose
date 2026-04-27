@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
+import { useTopBarActions } from "@/app/contexts/TopBarActionsContext";
 import type { AppView } from "@/app/AppShell";
 
 interface TopBarProps {
@@ -23,10 +24,11 @@ export function TopBar({
 }: TopBarProps) {
   const { t } = useTranslation("settings");
   const pageLabel = activeView ? PAGE_LABELS[activeView] : undefined;
+  const viewActions = useTopBarActions();
 
   return (
     <header
-      className={cn("flex h-12 items-center gap-3 pl-20 pr-3", className)}
+      className={cn("flex h-12 items-center gap-2 pl-20 pr-3", className)}
       data-tauri-drag-region
     >
       <h1
@@ -47,6 +49,10 @@ export function TopBar({
       </h1>
 
       <div className="min-w-0 flex-1" data-tauri-drag-region />
+
+      {viewActions && (
+        <div className="flex items-center gap-2">{viewActions}</div>
+      )}
 
       <Button
         type="button"

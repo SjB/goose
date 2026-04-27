@@ -1335,7 +1335,19 @@ EOF
 
 ## Phase 3 — Skills (Commit 3)
 
-### Task 3.1: Create `CategoryHeroTile` component
+### Task 3.1: ~~Create CategoryHeroTile component~~ REMOVED
+
+Removed on 2026-04-27 at the Phase 3 visual review. Component was
+implemented and rendered, but the cropped photo backgrounds read as
+visually chaotic at production fidelity, and categories aren't a real
+feature in goose2 yet. See spec §6.4 for the deferral. The component
+file, its 6 photo assets, and the tile-mask SVG were all deleted in
+the same Phase 3 commit that introduced them. Tasks 3.2 (category
+row render) is also marked REMOVED below.
+
+**Original task content preserved here for reference:**
+
+### Task 3.1 (original): Create `CategoryHeroTile` component
 
 **Files:**
 - Create: `ui/goose2/src/features/skills/ui/CategoryHeroTile.tsx`
@@ -1413,7 +1425,16 @@ Expected: baseline.
 
 ---
 
-### Task 3.2: Render category hero tile row in `SkillsView`
+### Task 3.2: ~~Render category hero tile row in SkillsView~~ REMOVED
+
+Removed on 2026-04-27 at the Phase 3 visual review. Same reason as
+Task 3.1. The asset imports + `CATEGORY_TILES` const + category
+`<section>` JSX block were removed from `SkillsView.tsx`; the 6 photo
+assets + `tile-mask.svg` were deleted from `src/assets/skills/`.
+
+**Original task content preserved here for reference:**
+
+### Task 3.2 (original): Render category hero tile row in `SkillsView`
 
 **Files:**
 - Modify: `ui/goose2/src/features/skills/ui/SkillsView.tsx`
@@ -1652,7 +1673,42 @@ Empty state should be the first card. Italic placeholder visible. Arrow button o
 
 ---
 
-### Task 3.5: Polish the inline toolbar above the grid
+### Task 3.5: ~~Polish inline toolbar~~ REVISED — toolbar moved to TopBar (2026-04-27)
+
+Visual review on 2026-04-27 showed the Skills page header + inline
+toolbar + SearchBar all reading as redundant chrome inside an already-
+bounded canvas page. Tulsi directed: drop the page-body header
+("Skills" + subtitle), drop the SearchBar entirely, and move the
+action buttons (Import, Add New, plus new decorative Sort + List view
+buttons) up to TopBar.
+
+**Files actually modified:**
+- New: `ui/goose2/src/app/contexts/TopBarActionsContext.tsx`
+  (~40 lines): `TopBarActionsProvider` + `useTopBarActions` /
+  `useSetTopBarActions` hooks
+- `ui/goose2/src/app/AppShell.tsx`: wrap tree with
+  `<TopBarActionsProvider>` so both TopBar and AppShellContent share
+  the same context
+- `ui/goose2/src/app/ui/TopBar.tsx`: consume context, render the
+  view-provided actions in a flex region before the Settings button
+- `ui/goose2/src/features/skills/ui/SkillsView.tsx`:
+  - Remove page-body header (h1 + subtitle) and the inline toolbar
+  - Remove `SearchBar` + `search` state + `filtered` computed list
+  - Add a `useEffect` that pushes 4 action buttons (List view, Sort,
+    Import, Add New) into the topbar-actions context on mount and
+    clears on unmount; the JSX closes over local refs/handlers so
+    the hidden file input stays co-located with the view
+  - Decorative List view + Sort buttons use `tabIndex={-1}` and
+    annotated i18n-check-ignore aria labels (mirrors the Install
+    button placeholder pattern)
+  - Bump grid container `max-w-5xl` → `max-w-7xl` so 4 columns fit
+    when the window has space
+  - Wrap `handleNewSkill` in `useCallback` so it can safely live in
+    the topbar-effect deps
+
+**Original task content preserved here for reference:**
+
+### Task 3.5 (original): Polish the inline toolbar above the grid
 
 **Files:**
 - Modify: `ui/goose2/src/features/skills/ui/SkillsView.tsx`

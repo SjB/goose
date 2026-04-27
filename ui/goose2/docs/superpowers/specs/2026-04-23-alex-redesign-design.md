@@ -574,40 +574,56 @@ Contents:
 - Arrow-right submit button bottom-right: `bg-[--surface-install]`,
   `rounded-full`, 40×32, arrow icon
 
-### 6.4 Category hero tiles — static decorative
+### 6.4 Category hero tiles — REMOVED at visual review (2026-04-27)
 
-8 hero tiles at the top of Skills view:
-Technical / Creative / Business / People / Personal Productivity /
-Research / Finance Skills (7 categories) + 1 new-skill empty-state
-slot in the first grid position.
+Originally specced as 7 category hero tiles + 1 new-skill empty-state
+slot at the top of the Skills view. Implementation landed in Phase 3
+working tree but was removed at the dev-server visual review on
+2026-04-27: at production fidelity the cropped photo backgrounds read
+as visually chaotic (notably the People tile's cropped face), and
+since categories are not a real feature in goose2, they could not
+justify their visual weight. The new-skill empty-state slot continues
+to live as the always-first card in the skill grid (§6.3).
 
-Each tile: 260×260, rounded (radius TBD — extract from Skills-Full
-frame `234:2240`), blurry colored photo background, 24px Cash Sans
-Regular white label top-left with `tracking: -0.02em` and
-`line-height: 0.96` (labels can wrap to 2 lines, e.g. "People / Skills").
+The asset-export fallback infrastructure that was provisioned for the
+Research tile (CSS gradient prop on `CategoryHeroTile`) is no longer
+needed. The fallback PATTERN itself (§10.1) remains valid for any
+future asset-resolution decisions.
 
-Asset pipeline: pull Alex's 7 category photo assets + the 260×260
-mask image from frame `234:2240` via Figma MCP during commit 1 (same
-7-day URL lifecycle). Save to `src/assets/skills/` and reference
-statically.
+Deferred to a future spec when categorization is a real feature with
+filtering / browsing semantics. Re-fetch Figma assets at that point
+(originals expired 7 days after 2026-04-23 anyway, per the spec's
+asset-export pipeline).
 
-**Non-functional** — clicking does nothing, tiles don't filter anything.
-Documented in the spec and flagged as demo-stage. (Real category
-feature = separate spec.)
+### 6.5 Toolbar — moved to TopBar (revised 2026-04-27)
 
-### 6.5 Inline toolbar (above grid)
-
-Keep current layout of action buttons inline above the skill-card grid.
-Do NOT migrate to TopBar.
+At the Phase 3 visual review, Tulsi directed the action buttons to
+move out of the Skills page body and into the global TopBar (right of
+the breadcrumb, before Settings). The inline page-body header
+("Skills" / "Reusable instructions for your AI agents") and the
+SearchBar above the grid were both removed at the same time — the
+breadcrumb in TopBar already names the active view, and the page
+content can speak for itself without a sub-header.
 
 Buttons (all `bg-[--surface-button]`, `rounded-full`, `h-8`):
-- List-view (icon-only, 38×32) — toggles view modes if present
-- Sort (icon-only, 38×32)
-- Search (icon-only, 36×32) — opens/focuses search
-- Import (text pill with upload icon, 90×32)
-- Add New (text pill with plus icon, 105×32)
+- List view (icon-only, 36×32) — decorative; no list-mode toggle yet
+- Sort (icon-only, 36×32) — decorative; no sort flow yet
+- Import (text pill with upload icon) — triggers hidden file input
+  in `SkillsView` via the topbar-actions context
+- Add New (text pill with plus icon) — opens `CreateSkillDialog`
 
-Text pills: 14px label at `opacity: 0.7`, leading icon.
+Wiring pattern: a small `TopBarActionsProvider` lives at AppShell
+level, exposing `useSetTopBarActions()`. The active view (currently
+only `SkillsView`) pushes its action JSX on mount and clears on
+unmount; the JSX closes over the view's local state and refs so file
+inputs and dialog handlers stay co-located with the view that owns
+them. `TopBar` consumes via `useTopBarActions()` and renders the
+result before its Settings pill.
+
+The decorative List view + Sort buttons mirror the Install button
+pattern: `tabIndex={-1}` so they're skipped in keyboard navigation
+and they don't ship to production with no flow attached. When real
+sort/list-mode features land, wire them in this same slot.
 
 ### 6.6 Bottom fade gradient
 

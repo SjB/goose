@@ -31,6 +31,7 @@ import {
   clearReplayBuffer,
   getAndDeleteReplayBuffer,
 } from "@/features/chat/hooks/replayBuffer";
+import { useActiveProjectTint } from "@/features/chat/hooks/useActiveProjectTint";
 import { resolveSessionCwd } from "@/features/projects/lib/sessionCwdSelection";
 import { perfLog } from "@/shared/lib/perfLog";
 import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
@@ -67,6 +68,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     null,
   );
   const [activeView, setActiveView] = useState<AppView>("home");
+  const projectTint = useActiveProjectTint();
+  const tint = activeView === "chat" ? projectTint : null;
   const [homeSessionId, setHomeSessionId] = useState<string | null>(() =>
     loadStoredHomeSessionId(),
   );
@@ -681,7 +684,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   return (
     <TopBarActionsProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-dot-grid text-[var(--text-default-alex)]">
+      <div
+        className="flex h-screen w-screen flex-col overflow-hidden bg-dot-grid text-[var(--text-default-alex)]"
+        style={
+          { "--project-tint": tint ?? "transparent" } as React.CSSProperties
+        }
+      >
         <TopBar
           onSettingsClick={() => openSettings()}
           activeView={activeView}

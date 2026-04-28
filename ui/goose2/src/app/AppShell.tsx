@@ -5,8 +5,8 @@ import { CreateProjectDialog } from "@/features/projects/ui/CreateProjectDialog"
 import { archiveProject } from "@/features/projects/api/projects";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SettingsModal } from "@/features/settings/ui/SettingsModal";
-import type { SectionId } from "@/features/settings/ui/SettingsModal";
-import { OPEN_SETTINGS_EVENT } from "@/features/settings/lib/settingsEvents";
+import type { ExtensionEntry } from "@/features/extensions/types";
+import type { SkillInfo } from "@/features/skills/api/skills";
 import { TopBar } from "./ui/TopBar";
 import { TopBarActionsProvider } from "./contexts/TopBarActionsContext";
 import { useChatStore } from "@/features/chat/stores/chatStore";
@@ -19,7 +19,9 @@ import { useProjectStore } from "@/features/projects/stores/projectStore";
 import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
+import { useGlobalAppShortcuts } from "./hooks/useGlobalAppShortcuts";
 import { useHomeSessionStateSync } from "./hooks/useHomeSessionStateSync";
+import { useSettingsModal } from "./hooks/useSettingsModal";
 import { loadStoredHomeSessionId } from "./lib/homeSessionStorage";
 import { resolveSupportedSessionModelPreference } from "./lib/resolveSupportedSessionModelPreference";
 import { useCreatePersonaNavigation } from "./hooks/useCreatePersonaNavigation";
@@ -37,39 +39,27 @@ import {
   GlobalComposerPill,
   type GlobalComposeOptions,
 } from "@/shared/ui/GlobalComposerPill";
-
-export type AppView =
-  | "home"
-  | "chat"
-  | "skills"
-  | "agents"
-  | "projects"
-  | "session-history";
+import type { AppView } from "./types";
 
 const SIDEBAR_DEFAULT_WIDTH = 240;
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 380;
 const SIDEBAR_SNAP_COLLAPSE_THRESHOLD = 100;
 const SIDEBAR_COLLAPSED_WIDTH = 0;
-const SETTINGS_SECTIONS = new Set<SectionId>([
-  "appearance",
-  "providers",
-  "compaction",
-  "extensions",
-  "voice",
-  "general",
-  "projects",
-  "chats",
-  "doctor",
-  "about",
-]);
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsInitialSection, setSettingsInitialSection] =
-    useState<SectionId>("appearance");
+  const {
+    openSettings,
+    settingsInitialSection,
+    settingsOpen,
+    setSettingsOpen,
+  } = useSettingsModal();
+  const [pendingExtension, setPendingExtension] =
+    useState<ExtensionEntry | null>(null);
+  const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
+  const [pendingSkill, setPendingSkill] = useState<SkillInfo | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createProjectInitialWorkingDir, setCreateProjectInitialWorkingDir] =
     useState<string | null>(null);
@@ -89,9 +79,18 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const pendingProjectCreatedRef = useRef<((projectId: string) => void) | null>(
     null,
   );
+  const previousViewRef = useRef<AppView | null>(null);
   const homeSessionRequestRef = useRef<Promise<ChatSession | null> | null>(
     null,
   );
+  const navigateToView = useCallback((nextView: AppView) => {
+    setActiveView((currentView) => {
+      if (nextView === "search" && currentView !== "search") {
+        previousViewRef.current = currentView;
+      }
+      return nextView;
+    });
+  }, []);
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     const sid = sessionId.slice(0, 8);
     const existingMsgs = useChatStore.getState().messagesBySession[sessionId];
@@ -414,35 +413,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     },
     [chatStore, sessionStore],
   );
-  const openSettings = useCallback((section: SectionId = "appearance") => {
-    setSettingsInitialSection(section);
-    setSettingsOpen(true);
-  }, []);
-
-  useEffect(() => {
-    const handleOpenSettingsEvent = (event: Event) => {
-      const section = (event as CustomEvent<{ section?: string }>).detail
-        ?.section;
-      if (section && SETTINGS_SECTIONS.has(section as SectionId)) {
-        openSettings(section as SectionId);
-        return;
-      }
-
-      openSettings();
-    };
-
-    window.addEventListener(
-      OPEN_SETTINGS_EVENT,
-      handleOpenSettingsEvent as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        OPEN_SETTINGS_EVENT,
-        handleOpenSettingsEvent as EventListener,
-      );
-    };
-  }, [openSettings]);
-
   const handleArchiveChat = useCallback(
     async (sessionId: string) => {
       const { activeSessionId: currentActiveSessionId } =
@@ -576,12 +546,41 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const handleNavigate = useCallback(
     (view: AppView) => {
-      if (view !== "chat") {
+      if (view !== "chat" && view !== "search") {
         sessionStore.setActiveSession(null);
       }
-      setActiveView(view);
+      navigateToView(view);
     },
-    [sessionStore],
+    [navigateToView, sessionStore],
+  );
+
+  const handleExitSearch = useCallback(() => {
+    const previousView = previousViewRef.current ?? "home";
+    navigateToView(previousView === "search" ? "home" : previousView);
+  }, [navigateToView]);
+
+  const handleOpenExtensionFromSearch = useCallback(
+    (entry: ExtensionEntry) => {
+      setPendingExtension(entry);
+      openSettings("extensions");
+    },
+    [openSettings],
+  );
+
+  const handleOpenAgentFromSearch = useCallback(
+    (agentId: string) => {
+      setPendingAgentId(agentId);
+      handleNavigate("agents");
+    },
+    [handleNavigate],
+  );
+
+  const handleOpenSkillFromSearch = useCallback(
+    (skill: SkillInfo) => {
+      setPendingSkill(skill);
+      handleNavigate("skills");
+    },
+    [handleNavigate],
   );
 
   const handleCreatePersona = useCreatePersonaNavigation(() =>
@@ -639,36 +638,27 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
   }, []);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // Cmd+, for settings
-      if (e.key === "," && e.metaKey) {
-        e.preventDefault();
-        setSettingsOpen((prev) => !prev);
+  useGlobalAppShortcuts({
+    onCloseActiveSession: useCallback(() => {
+      const { activeSessionId } = useChatSessionStore.getState();
+      if (activeSessionId) {
+        clearActiveSession(activeSessionId);
       }
-      // Cmd+B for sidebar toggle
-      if (e.key === "b" && e.metaKey) {
-        e.preventDefault();
-        setSidebarCollapsed((prev) => !prev);
-      }
-      // Cmd+W returns to home instead of closing the window
-      if (e.key === "w" && e.metaKey) {
-        e.preventDefault();
-        const { activeSessionId } = useChatSessionStore.getState();
-        if (activeSessionId) {
-          clearActiveSession(activeSessionId);
-        }
-      }
-      // Cmd+N opens new conversation screen
-      if (e.key === "n" && e.metaKey) {
-        e.preventDefault();
-        sessionStore.setActiveSession(null);
-        setActiveView("home");
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [clearActiveSession, sessionStore]);
+    }, [clearActiveSession]),
+    onNewConversation: useCallback(() => {
+      sessionStore.setActiveSession(null);
+      setActiveView("home");
+    }, [sessionStore]),
+    onOpenSearch: useCallback(() => navigateToView("search"), [navigateToView]),
+    onToggleSettings: useCallback(
+      () => setSettingsOpen((prev) => !prev),
+      [setSettingsOpen],
+    ),
+    onToggleSidebar: useCallback(
+      () => setSidebarCollapsed((prev) => !prev),
+      [],
+    ),
+  });
 
   const editingProjectProp = useMemo(
     () =>
@@ -700,11 +690,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           }
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
+          onNavigate={handleNavigate}
+          className="relative z-30"
         />
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
           <div
-            className="flex-shrink-0 h-full overflow-hidden"
+            className="relative z-20 flex-shrink-0 h-full overflow-hidden"
             style={{
               width: sidebarCollapsed ? 0 : sidebarWidth + 12,
               paddingTop: 12,
@@ -743,7 +735,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             <div
               onMouseDown={handleResizeStart}
               onDoubleClick={handleResizeDoubleClick}
-              className="flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
+              className="relative z-20 flex-shrink-0 w-2 h-full cursor-col-resize group flex items-center justify-center"
             >
               <div className="w-px h-8 rounded-full bg-transparent group-hover:bg-border transition-colors" />
             </div>
@@ -762,7 +754,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 onRenameChat={handleRenameChat}
                 onSelectSession={handleSelectSession}
                 onSelectSearchResult={handleSelectSearchResult}
+                onExitSearch={handleExitSearch}
+                onOpenExtension={handleOpenExtensionFromSearch}
+                onOpenAgent={handleOpenAgentFromSearch}
+                onOpenSkill={handleOpenSkillFromSearch}
                 onStartChatFromProject={handleStartChatFromProject}
+                openAgentId={pendingAgentId}
+                openSkill={pendingSkill}
+                onOpenAgentConsumed={() => setPendingAgentId(null)}
+                onOpenSkillConsumed={() => setPendingSkill(null)}
               />
             )}
           </main>
@@ -770,7 +770,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isHome ? "max-h-0 opacity-0" : "max-h-8 opacity-100"
+            isHome || activeView === "search"
+              ? "max-h-0 opacity-0"
+              : "max-h-8 opacity-100"
           }`}
         >
           <StatusBar
@@ -783,7 +785,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         {settingsOpen && (
           <SettingsModal
             initialSection={settingsInitialSection}
-            onClose={() => setSettingsOpen(false)}
+            openExtension={pendingExtension}
+            onOpenExtensionConsumed={() => setPendingExtension(null)}
+            onClose={() => {
+              setSettingsOpen(false);
+              setPendingExtension(null);
+            }}
           />
         )}
 

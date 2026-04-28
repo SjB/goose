@@ -22,8 +22,6 @@
     "emptyTitle": "Aún no hay skills",
     "exportedTo": "Exportado a {{filename}}",
     "newSkill": "Nueva skill",
-    "newSkillEmptyExample": "Describe tu nueva skill, p. ej.",
-    "newSkillEmptyExampleQuote": "\"Resume cualquier página web en 3 puntos cuando se le dé una URL.\"",
     "sort": "Ordenar",
     "listView": "Vista de lista",
     "noMatchesDescription": "Prueba con otro término de búsqueda.",

@@ -28,6 +28,7 @@ import { AppearanceSettings } from "./AppearanceSettings";
 import { DoctorSettings } from "./DoctorSettings";
 import { ProvidersSettings } from "./ProvidersSettings";
 import { ExtensionsSettings } from "@/features/extensions/ui/ExtensionsSettings";
+import type { ExtensionEntry } from "@/features/extensions/types";
 import { VoiceInputSettings } from "./VoiceInputSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { CompactionSettings } from "./CompactionSettings";
@@ -61,11 +62,15 @@ export type SectionId = (typeof NAV_ITEMS)[number]["id"];
 interface SettingsModalProps {
   onClose: () => void;
   initialSection?: SectionId;
+  openExtension?: ExtensionEntry | null;
+  onOpenExtensionConsumed?: () => void;
 }
 
 export function SettingsModal({
   onClose,
   initialSection = "appearance",
+  openExtension,
+  onOpenExtensionConsumed,
 }: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
@@ -239,7 +244,12 @@ export function SettingsModal({
               {activeSection === "appearance" && <AppearanceSettings />}
               {activeSection === "providers" && <ProvidersSettings />}
               {activeSection === "compaction" && <CompactionSettings />}
-              {activeSection === "extensions" && <ExtensionsSettings />}
+              {activeSection === "extensions" && (
+                <ExtensionsSettings
+                  openExtension={openExtension}
+                  onOpenExtensionConsumed={onOpenExtensionConsumed}
+                />
+              )}
               {activeSection === "voice" && <VoiceInputSettings />}
               {activeSection === "doctor" && <DoctorSettings />}
               {activeSection === "general" && <GeneralSettings />}

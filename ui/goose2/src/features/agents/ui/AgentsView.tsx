@@ -37,7 +37,15 @@ import {
 } from "@/features/agents/lib/personaImport";
 import { getPersonaSource } from "@/features/agents/lib/personaPresentation";
 
-export function AgentsView() {
+interface AgentsViewProps {
+  openAgentId?: string | null;
+  onOpenAgentConsumed?: () => void;
+}
+
+export function AgentsView({
+  openAgentId,
+  onOpenAgentConsumed,
+}: AgentsViewProps = {}) {
   const { t } = useTranslation(["agents", "common"]);
   const setTopBarActions = useSetTopBarActions();
   const [deletingPersona, setDeletingPersona] = useState<Persona | null>(null);
@@ -216,6 +224,24 @@ export function AgentsView() {
   const handleNewPersona = useCallback(() => {
     openPersonaEditor();
   }, [openPersonaEditor]);
+
+  useEffect(() => {
+    if (personasLoading || !openAgentId) {
+      return;
+    }
+
+    const persona = personas.find((candidate) => candidate.id === openAgentId);
+    if (persona) {
+      openPersonaEditor(persona, "details");
+    }
+    onOpenAgentConsumed?.();
+  }, [
+    onOpenAgentConsumed,
+    openAgentId,
+    openPersonaEditor,
+    personas,
+    personasLoading,
+  ]);
 
   useEffect(() => {
     const pillCls =

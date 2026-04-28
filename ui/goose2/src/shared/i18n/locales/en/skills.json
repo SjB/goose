@@ -22,8 +22,6 @@
     "emptyTitle": "No skills yet",
     "exportedTo": "Exported to {{filename}}",
     "newSkill": "New Skill",
-    "newSkillEmptyExample": "Describe your new skill, e.g.",
-    "newSkillEmptyExampleQuote": "\"Summarize any webpage into 3 bullet points when given a URL.\"",
     "sort": "Sort",
     "listView": "List view",
     "noMatchesDescription": "Try a different search term.",

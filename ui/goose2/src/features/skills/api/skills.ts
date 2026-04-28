@@ -7,6 +7,10 @@ export interface SkillInfo {
   path: string;
 }
 
+interface ListSkillsOptions {
+  force?: boolean;
+}
+
 // Shape returned by _goose/sources/*. Narrowed to skill-type sources here.
 interface SourceEntry {
   type: "skill";
@@ -26,6 +30,31 @@ function toSkillInfo(source: SourceEntry): SkillInfo {
   };
 }
 
+let skillsCache: SkillInfo[] | null = null;
+let skillsRequest: Promise<SkillInfo[]> | null = null;
+
+function mergeSkill(skills: SkillInfo[], skill: SkillInfo): SkillInfo[] {
+  const next = skills.filter((candidate) => candidate.name !== skill.name);
+  return [skill, ...next];
+}
+
+function setSkillsCache(skills: SkillInfo[]): SkillInfo[] {
+  skillsCache = skills;
+  return skills;
+}
+
+export function getCachedSkills(): SkillInfo[] {
+  return skillsCache ?? [];
+}
+
+export function primeSkillsCache(skill: SkillInfo): SkillInfo[] {
+  return setSkillsCache(mergeSkill(skillsCache ?? [], skill));
+}
+
+function clearSkillsCache() {
+  skillsCache = null;
+}
+
 export async function createSkill(
   name: string,
   description: string,
@@ -39,13 +68,30 @@ export async function createSkill(
     content: instructions,
     global: true,
   });
+  clearSkillsCache();
 }
 
-export async function listSkills(): Promise<SkillInfo[]> {
+async function fetchSkills(): Promise<SkillInfo[]> {
   const client = await getClient();
   const raw = await client.extMethod("_goose/sources/list", { type: "skill" });
   const sources = (raw.sources ?? []) as SourceEntry[];
-  return sources.map(toSkillInfo);
+  return setSkillsCache(sources.map(toSkillInfo));
+}
+
+export async function listSkills(
+  options: ListSkillsOptions = {},
+): Promise<SkillInfo[]> {
+  if (!options.force && skillsCache) {
+    return skillsCache;
+  }
+
+  if (!skillsRequest) {
+    skillsRequest = fetchSkills().finally(() => {
+      skillsRequest = null;
+    });
+  }
+
+  return skillsRequest;
 }
 
 export async function deleteSkill(name: string): Promise<void> {
@@ -55,6 +101,9 @@ export async function deleteSkill(name: string): Promise<void> {
     name,
     global: true,
   });
+  if (skillsCache) {
+    setSkillsCache(skillsCache.filter((skill) => skill.name !== name));
+  }
 }
 
 export async function updateSkill(
@@ -70,7 +119,9 @@ export async function updateSkill(
     content: instructions,
     global: true,
   });
-  return toSkillInfo(raw.source as SourceEntry);
+  const skill = toSkillInfo(raw.source as SourceEntry);
+  setSkillsCache(mergeSkill(skillsCache ?? [], skill));
+  return skill;
 }
 
 export async function exportSkill(
@@ -99,5 +150,5 @@ export async function importSkills(
     global: true,
   });
   const sources = (raw.sources ?? []) as SourceEntry[];
-  return sources.map(toSkillInfo);
+  return setSkillsCache(sources.map(toSkillInfo));
 }

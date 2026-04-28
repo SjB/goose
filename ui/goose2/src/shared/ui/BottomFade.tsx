@@ -1,10 +1,22 @@
-export function BottomFade() {
+import { cn } from "@/shared/lib/cn";
+
+interface BottomFadeProps {
+  className?: string;
+  surface?: string;
+}
+
+export function BottomFade({
+  className,
+  surface = "var(--canvas)",
+}: BottomFadeProps) {
   return (
     <div
-      className="pointer-events-none sticky bottom-0 left-0 h-64 w-full"
+      className={cn(
+        "pointer-events-none sticky bottom-0 left-0 h-64 w-full",
+        className,
+      )}
       style={{
-        background:
-          "linear-gradient(to bottom, rgba(222,222,222,0) 0%, var(--canvas) 100%)",
+        background: `linear-gradient(to bottom, rgba(222,222,222,0) 0%, ${surface} 100%)`,
         backdropFilter: "blur(3px)",
         WebkitBackdropFilter: "blur(3px)",
         maskImage:

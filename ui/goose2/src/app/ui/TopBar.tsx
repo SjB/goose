@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import {
+  IconSearch,
   IconLayoutSidebar,
   IconLayoutSidebarFilled,
 } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { useTopBarActions } from "@/app/contexts/TopBarActionsContext";
-import type { AppView } from "@/app/AppShell";
+import type { AppView } from "@/app/types";
 
 interface TopBarProps {
   onSettingsClick?: () => void;
@@ -15,6 +16,7 @@ interface TopBarProps {
   className?: string;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  onNavigate?: (view: AppView) => void;
 }
 
 const PAGE_LABELS: Partial<Record<AppView, string>> = {
@@ -22,6 +24,7 @@ const PAGE_LABELS: Partial<Record<AppView, string>> = {
   agents: "Agents",
   projects: "Projects",
   "session-history": "Session History",
+  search: "Search",
 };
 
 export function TopBar({
@@ -31,9 +34,11 @@ export function TopBar({
   className,
   sidebarCollapsed,
   onToggleSidebar,
+  onNavigate,
 }: TopBarProps) {
   const { t } = useTranslation("settings");
   const { t: tSidebar } = useTranslation("sidebar");
+  const { t: tCommon } = useTranslation("common");
   const pageLabel =
     activeView === "chat"
       ? chatSessionTitle
@@ -64,6 +69,19 @@ export function TopBar({
           title={toggleLabel}
         >
           <ToggleIcon className="size-4" />
+        </Button>
+      )}
+      {onNavigate && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onNavigate("search")}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label={tCommon("actions.search")}
+          title={tCommon("actions.search")}
+        >
+          <IconSearch className="size-4" />
         </Button>
       )}
       <h1

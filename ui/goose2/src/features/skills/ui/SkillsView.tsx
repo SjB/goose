@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowRight,
   ArrowUpDown,
   List,
   Plus,
@@ -36,6 +35,8 @@ import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
 import { CreateSkillDialog } from "./CreateSkillDialog";
 import {
   listSkills,
+  getCachedSkills,
+  primeSkillsCache,
   deleteSkill,
   createSkill,
   exportSkill,
@@ -51,6 +52,14 @@ const TAG_PILL_COLORS = [
 
 function tagPillColor(index: number): string {
   return TAG_PILL_COLORS[index % TAG_PILL_COLORS.length];
+}
+
+function mergeSkillIntoList(
+  skills: SkillInfo[],
+  skill: SkillInfo,
+): SkillInfo[] {
+  const next = skills.filter((candidate) => candidate.name !== skill.name);
+  return [skill, ...next];
 }
 
 function SkillCardMenu({
@@ -106,34 +115,61 @@ function SkillCardMenu({
   );
 }
 
-export function SkillsView() {
+interface SkillsViewProps {
+  openSkill?: SkillInfo | null;
+  onOpenSkillConsumed?: () => void;
+}
+
+export function SkillsView({
+  openSkill,
+  onOpenSkillConsumed,
+}: SkillsViewProps = {}) {
   const { t } = useTranslation(["skills", "common"]);
   const setTopBarActions = useSetTopBarActions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<
     { name: string; description: string; instructions: string } | undefined
   >(undefined);
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [skills, setSkills] = useState<SkillInfo[]>(() => {
+    const cached = getCachedSkills();
+    return openSkill ? mergeSkillIntoList(cached, openSkill) : cached;
+  });
+  const [loading, setLoading] = useState(
+    () => getCachedSkills().length === 0 && !openSkill,
+  );
   const [deletingSkill, setDeletingSkill] = useState<SkillInfo | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const loadSkills = useCallback(async () => {
+  const loadSkills = useCallback(async (preserveSkill?: SkillInfo) => {
+    const cached = getCachedSkills();
+    if (cached.length > 0) {
+      setSkills(
+        preserveSkill ? mergeSkillIntoList(cached, preserveSkill) : cached,
+      );
+      setLoading(false);
+    }
+
     try {
-      const result = await listSkills();
-      setSkills(result);
+      const result = await listSkills({ force: true });
+      setSkills(
+        preserveSkill ? mergeSkillIntoList(result, preserveSkill) : result,
+      );
     } catch {
-      // skills directory may not exist yet
-      setSkills([]);
+      setSkills((current) => {
+        if (current.length > 0) {
+          return current;
+        }
+        return preserveSkill ? [preserveSkill] : [];
+      });
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadSkills();
-  }, [loadSkills]);
+    void loadSkills(openSkill ?? undefined);
+  }, [loadSkills, openSkill]);
 
   const handleDelete = (skill: SkillInfo) => {
     setDeletingSkill(skill);
@@ -226,6 +262,23 @@ export function SkillsView() {
     setDialogOpen(true);
   }, []);
 
+  useEffect(() => {
+    if (!openSkill) {
+      return;
+    }
+
+    primeSkillsCache(openSkill);
+    setSkills((current) => mergeSkillIntoList(current, openSkill));
+    setLoading(false);
+    setEditingSkill({
+      name: openSkill.name,
+      description: openSkill.description,
+      instructions: openSkill.instructions,
+    });
+    setDialogOpen(true);
+    onOpenSkillConsumed?.();
+  }, [onOpenSkillConsumed, openSkill]);
+
   const handleDropImport = useCallback(
     async (fileBytes: number[], fileName: string) => {
       try {
@@ -297,10 +350,7 @@ export function SkillsView() {
 
   return (
     <div className="flex flex-1 flex-col h-full min-h-0">
-      <div
-        className="flex-1 overflow-y-auto min-h-0 relative"
-        {...dropHandlers}
-      >
+      <div className="flex-1 overflow-y-auto min-h-0 relative">
         <div className="max-w-7xl mx-auto w-full px-6 py-8 page-transition">
           <input
             ref={importInputRef}
@@ -311,85 +361,80 @@ export function SkillsView() {
           />
 
           {/* Skills grid (always shows new-skill card; cards appear when present) */}
-          {!loading && (
-            <section
+          <section className="grid grid-cols-[repeat(auto-fill,260px)] gap-8 rounded-tile transition-colors">
+            <button
+              type="button"
+              onClick={handleNewSkill}
               className={cn(
-                "grid grid-cols-[repeat(auto-fill,260px)] gap-8 rounded-tile transition-colors",
-                isDragOver && "ring-2 ring-ring ring-offset-2",
+                "group relative flex h-[260px] w-[260px] items-center justify-center overflow-hidden rounded-tile bg-[var(--surface-tile)]/45 text-[var(--text-muted-alex)] opacity-55 transition-[background-color,opacity,box-shadow,color,transform] duration-200 ease-out hover:bg-white/70 hover:text-[var(--text-title-alex)] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.99]",
+                isDragOver &&
+                  "bg-white/75 text-[var(--text-title-alex)] opacity-100 ring-2 ring-ring ring-offset-2",
               )}
+              aria-label={t("view.newSkill")}
+              {...dropHandlers}
             >
-              {/* New-skill empty state — always first */}
-              <div className="group relative h-[260px] w-[260px] overflow-hidden rounded-tile bg-[var(--surface-tile)] p-5">
-                <span className="inline-flex h-5 items-center rounded-full bg-[var(--pill-neutral)] px-[6px] pb-[3px] text-[14px] text-[var(--text-title-alex)]">
-                  {/* i18n-check-ignore: visual placeholder pill mirroring the kebab-case skill-name pattern, not user copy */}
-                  new-skill
-                </span>
-                <p className="mt-8 text-[16px] leading-[20px] text-[var(--text-muted-alex)]">
-                  {t("view.newSkillEmptyExample")}{" "}
-                  <em className="italic">
-                    {t("view.newSkillEmptyExampleQuote")}
-                  </em>
-                </p>
-                <button
-                  type="button"
-                  onClick={handleNewSkill}
-                  className="absolute bottom-4 right-4 flex h-8 w-10 items-center justify-center rounded-full bg-[var(--surface-install)]"
-                  aria-label={t("view.newSkill")}
-                >
-                  <ArrowRight className="size-4 text-black/70" />
-                </button>
-              </div>
+              <Plus
+                className="size-16 stroke-[1.4] transition-transform duration-200 ease-out group-hover:scale-110"
+                aria-hidden="true"
+              />
+            </button>
 
-              {skills.map((skill, index) => (
-                <div
-                  key={skill.name}
-                  className="group relative h-[260px] w-[260px] overflow-hidden rounded-tile bg-[var(--surface-tile)] p-5"
-                >
-                  <span
-                    className="inline-flex h-5 items-center rounded-full px-[6px] pb-[3px] text-[14px] text-[var(--text-title-alex)]"
-                    style={{ backgroundColor: tagPillColor(index) }}
+            {loading
+              ? [0, 1, 2].map((index) => (
+                  <div
+                    key={index}
+                    className="h-[260px] w-[260px] animate-pulse rounded-tile bg-[var(--surface-tile)]"
+                  />
+                ))
+              : skills.map((skill, index) => (
+                  <div
+                    key={skill.name}
+                    className="group relative h-[260px] w-[260px] overflow-hidden rounded-tile bg-[var(--surface-tile)] p-5"
                   >
-                    {skill.name}
-                  </span>
+                    <span
+                      className="inline-flex h-5 items-center rounded-full px-[6px] pb-[3px] text-[14px] text-[var(--text-title-alex)]"
+                      style={{ backgroundColor: tagPillColor(index) }}
+                    >
+                      {skill.name}
+                    </span>
 
-                  <p
-                    className="mt-8 text-[16px] leading-[20px] text-[var(--text-muted-alex)]"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 7,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {skill.description}
-                  </p>
+                    <p
+                      className="mt-8 text-[16px] leading-[20px] text-[var(--text-muted-alex)]"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 7,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {skill.description}
+                    </p>
 
-                  {/* Hover-only Install — visual placeholder; no real install flow exists for user-created skills */}
-                  <button
-                    type="button"
-                    className="absolute bottom-4 right-4 hidden h-8 rounded-full bg-[var(--surface-install)] px-3 text-[14px] text-black/70 group-hover:inline-flex group-hover:items-center"
-                    /* i18n-check-ignore: decorative placeholder button — no real install flow */
-                    aria-label={`Install ${skill.name} (placeholder)`}
-                    tabIndex={-1}
-                  >
-                    {/* i18n-check-ignore: decorative placeholder button — no real install flow */}
-                    Install
-                  </button>
+                    {/* Hover-only Install — visual placeholder; no real install flow exists for user-created skills */}
+                    <button
+                      type="button"
+                      className="absolute bottom-4 right-4 hidden h-8 rounded-full bg-[var(--surface-install)] px-3 text-[14px] text-black/70 group-hover:inline-flex group-hover:items-center"
+                      /* i18n-check-ignore: decorative placeholder button — no real install flow */
+                      aria-label={`Install ${skill.name} (placeholder)`}
+                      tabIndex={-1}
+                    >
+                      {/* i18n-check-ignore: decorative placeholder button — no real install flow */}
+                      Install
+                    </button>
 
-                  {/* Existing menu, hover-revealed */}
-                  <div className="absolute right-4 top-4 hidden group-hover:block">
-                    <SkillCardMenu
-                      skill={skill}
-                      onEdit={handleEdit}
-                      onDuplicate={handleDuplicate}
-                      onExport={handleExport}
-                      onDelete={handleDelete}
-                    />
+                    {/* Existing menu, hover-revealed */}
+                    <div className="absolute right-4 top-4 hidden group-hover:block">
+                      <SkillCardMenu
+                        skill={skill}
+                        onEdit={handleEdit}
+                        onDuplicate={handleDuplicate}
+                        onExport={handleExport}
+                        onDelete={handleDelete}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </section>
-          )}
+                ))}
+          </section>
         </div>
 
         <BottomFade />

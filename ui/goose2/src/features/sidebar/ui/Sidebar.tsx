@@ -4,7 +4,7 @@ import { BookOpen, Bot, History, Home, Search } from "lucide-react";
 import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
 import { cn } from "@/shared/lib/cn";
-import type { AppView } from "@/app/AppShell";
+import type { AppView } from "@/app/types";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import {

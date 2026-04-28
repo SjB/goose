@@ -7,6 +7,7 @@ export const TRANSLATION_NAMESPACES = [
   "chat",
   "home",
   "projects",
+  "search",
   "settings",
   "skills",
   "sidebar",

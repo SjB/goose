@@ -26,9 +26,11 @@ export function useSessionSearch({
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const queryRef = useRef(query);
 
   const clear = useCallback(() => {
     requestIdRef.current += 1;
+    queryRef.current = "";
     setQuery("");
     setSubmittedQuery("");
     setResults([]);
@@ -37,6 +39,7 @@ export function useSessionSearch({
   }, []);
 
   const updateQuery = useCallback((nextQuery: string) => {
+    queryRef.current = nextQuery;
     setQuery(nextQuery);
     if (!nextQuery.trim()) {
       requestIdRef.current += 1;
@@ -47,76 +50,79 @@ export function useSessionSearch({
     }
   }, []);
 
-  const search = useCallback(async () => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      clear();
-      return;
-    }
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-
-    const metadataResults = buildSessionSearchResults(
-      sessions,
-      trimmed,
-      [],
-      resolvers,
-      {
-        locale,
-        getDisplayTitle,
-      },
-    );
-
-    setSubmittedQuery(trimmed);
-    setError(null);
-    setResults(metadataResults);
-
-    const acpSessionIds = sessions.map(
-      (session) => session.acpSessionId ?? session.id,
-    );
-    if (trimmed.length < 2 || acpSessionIds.length === 0) {
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-
-    try {
-      const messageResults = await acpSearchSessions(trimmed, acpSessionIds);
-      if (requestIdRef.current !== requestId) {
+  const search = useCallback(
+    async (nextQuery = queryRef.current) => {
+      const trimmed = nextQuery.trim();
+      if (!trimmed) {
+        clear();
         return;
       }
 
-      setResults(
-        buildSessionSearchResults(
-          sessions,
-          trimmed,
-          messageResults,
-          resolvers,
-          {
-            locale,
-            getDisplayTitle,
-          },
-        ),
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      const metadataResults = buildSessionSearchResults(
+        sessions,
+        trimmed,
+        [],
+        resolvers,
+        {
+          locale,
+          getDisplayTitle,
+        },
       );
-    } catch (searchError) {
-      if (requestIdRef.current !== requestId) {
+
+      setSubmittedQuery(trimmed);
+      setError(null);
+      setResults(metadataResults);
+
+      const acpSessionIds = sessions.map(
+        (session) => session.acpSessionId ?? session.id,
+      );
+      if (trimmed.length < 2 || acpSessionIds.length === 0) {
+        setIsSearching(false);
         return;
       }
 
-      const message =
-        searchError instanceof Error
-          ? searchError.message
-          : String(searchError);
-      setError(message || "Search failed");
-      setResults(metadataResults);
-    } finally {
-      if (requestIdRef.current === requestId) {
-        setIsSearching(false);
+      setIsSearching(true);
+
+      try {
+        const messageResults = await acpSearchSessions(trimmed, acpSessionIds);
+        if (requestIdRef.current !== requestId) {
+          return;
+        }
+
+        setResults(
+          buildSessionSearchResults(
+            sessions,
+            trimmed,
+            messageResults,
+            resolvers,
+            {
+              locale,
+              getDisplayTitle,
+            },
+          ),
+        );
+      } catch (searchError) {
+        if (requestIdRef.current !== requestId) {
+          return;
+        }
+
+        const message =
+          searchError instanceof Error
+            ? searchError.message
+            : String(searchError);
+        setError(message || "Search failed");
+        setResults(metadataResults);
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setIsSearching(false);
+        }
       }
-    }
-  }, [clear, getDisplayTitle, locale, query, resolvers, sessions]);
+    },
+    [clear, getDisplayTitle, locale, resolvers, sessions],
+  );
 
   return {
     query,

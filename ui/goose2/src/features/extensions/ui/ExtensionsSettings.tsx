@@ -19,10 +19,20 @@ import {
 import { ExtensionItem } from "./ExtensionItem";
 import { ExtensionModal } from "./ExtensionModal";
 
-export function ExtensionsSettings() {
+interface ExtensionsSettingsProps {
+  openExtension?: ExtensionEntry | null;
+  onOpenExtensionConsumed?: () => void;
+}
+
+export function ExtensionsSettings({
+  openExtension,
+  onOpenExtensionConsumed,
+}: ExtensionsSettingsProps = {}) {
   const { t } = useTranslation("settings");
-  const [extensions, setExtensions] = useState<ExtensionEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [extensions, setExtensions] = useState<ExtensionEntry[]>(() =>
+    openExtension ? [openExtension] : [],
+  );
+  const [isLoading, setIsLoading] = useState(!openExtension);
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingExtension, setEditingExtension] =
     useState<ExtensionEntry | null>(null);
@@ -33,7 +43,7 @@ export function ExtensionsSettings() {
       const result = await listExtensions();
       setExtensions(result);
     } catch {
-      setExtensions([]);
+      setExtensions((current) => current);
     } finally {
       setIsLoading(false);
     }
@@ -42,6 +52,22 @@ export function ExtensionsSettings() {
   useEffect(() => {
     void fetchExtensions();
   }, [fetchExtensions]);
+
+  useEffect(() => {
+    if (!openExtension) {
+      return;
+    }
+
+    setExtensions((current) =>
+      current.some((entry) => entry.config_key === openExtension.config_key)
+        ? current
+        : [openExtension, ...current],
+    );
+    setIsLoading(false);
+    setEditingExtension(openExtension);
+    setModalMode("edit");
+    onOpenExtensionConsumed?.();
+  }, [onOpenExtensionConsumed, openExtension]);
 
   const matchesSearch = useCallback(
     (ext: ExtensionEntry) => {

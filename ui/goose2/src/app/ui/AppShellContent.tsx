@@ -5,9 +5,12 @@ import { SkillsView } from "@/features/skills/ui/SkillsView";
 import { AgentsView } from "@/features/agents/ui/AgentsView";
 import { ProjectsView } from "@/features/projects/ui/ProjectsView";
 import { SessionHistoryView } from "@/features/sessions/ui/SessionHistoryView";
+import { SearchView } from "@/features/search/ui/SearchView";
+import type { ExtensionEntry } from "@/features/extensions/types";
+import type { SkillInfo } from "@/features/skills/api/skills";
 import type { ChatSession } from "@/features/chat/stores/chatSessionStore";
 import type { ProjectInfo } from "@/features/projects/api/projects";
-import type { AppView } from "../AppShell";
+import type { AppView } from "../types";
 
 interface AppShellContentProps {
   activeView: AppView;
@@ -27,7 +30,15 @@ interface AppShellContentProps {
     messageId?: string,
     query?: string,
   ) => void;
+  onExitSearch: () => void;
+  onOpenExtension: (entry: ExtensionEntry) => void;
+  onOpenAgent: (agentId: string) => void;
+  onOpenSkill: (skill: SkillInfo) => void;
   onStartChatFromProject: (project: ProjectInfo) => void;
+  openAgentId?: string | null;
+  openSkill?: SkillInfo | null;
+  onOpenAgentConsumed?: () => void;
+  onOpenSkillConsumed?: () => void;
 }
 
 export function AppShellContent({
@@ -41,13 +52,31 @@ export function AppShellContent({
   onRenameChat,
   onSelectSession,
   onSelectSearchResult,
+  onExitSearch,
+  onOpenExtension,
+  onOpenAgent,
+  onOpenSkill,
   onStartChatFromProject,
+  openAgentId,
+  openSkill,
+  onOpenAgentConsumed,
+  onOpenSkillConsumed,
 }: AppShellContentProps) {
   switch (activeView) {
     case "skills":
-      return <SkillsView />;
+      return (
+        <SkillsView
+          openSkill={openSkill}
+          onOpenSkillConsumed={onOpenSkillConsumed}
+        />
+      );
     case "agents":
-      return <AgentsView />;
+      return (
+        <AgentsView
+          openAgentId={openAgentId}
+          onOpenAgentConsumed={onOpenAgentConsumed}
+        />
+      );
     case "projects":
       return <ProjectsView onStartChat={onStartChatFromProject} />;
     case "session-history":
@@ -77,5 +106,15 @@ export function AppShellContent({
       );
     case "home":
       return <HomeView />;
+    case "search":
+      return (
+        <SearchView
+          onExit={onExitSearch}
+          onSelectSearchResult={onSelectSearchResult}
+          onOpenExtension={onOpenExtension}
+          onOpenAgent={onOpenAgent}
+          onOpenSkill={onOpenSkill}
+        />
+      );
   }
 }

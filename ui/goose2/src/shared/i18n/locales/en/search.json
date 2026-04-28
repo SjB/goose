@@ -1,0 +1,23 @@
+{
+  "actions": {
+    "openAgent": "Open agent {{name}}",
+    "openExtension": "Open extension {{name}}",
+    "openSession": "Open chat {{name}}",
+    "openSkill": "Open skill {{name}}"
+  },
+  "heading": {
+    "ariaLabel": "Universal search",
+    "placeholder": "Search your world"
+  },
+  "noMatches": "No matches for \"{{query}}\"",
+  "sections": {
+    "agents": "Agents",
+    "chat": "Chat",
+    "extensions": "Extensions",
+    "skills": "Skills"
+  },
+  "states": {
+    "available": "Available",
+    "enabled": "Enabled"
+  }
+}

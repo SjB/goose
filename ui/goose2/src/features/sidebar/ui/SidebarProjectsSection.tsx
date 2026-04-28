@@ -10,7 +10,7 @@ import {
 import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
-import type { AppView } from "@/app/AppShell";
+import type { AppView } from "@/app/types";
 import type { ProjectInfo } from "@/features/projects/api/projects";
 import { SessionActivityIndicator } from "@/shared/ui/SessionActivityIndicator";
 import { SidebarItemMenu } from "./SidebarItemMenu";

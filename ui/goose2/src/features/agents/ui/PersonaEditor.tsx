@@ -14,6 +14,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { useAvatarSrc } from "@/shared/hooks/useAvatarSrc";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -37,6 +38,7 @@ import { useProviderInventory } from "@/features/providers/hooks/useProviderInve
 import { getProviderInventory } from "@/features/providers/api/inventory";
 import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
+  getPersonaInitials,
   getPersonaSource,
   isPersonaReadOnly,
 } from "@/features/agents/lib/personaPresentation";
@@ -185,14 +187,14 @@ export function PersonaEditor({
     ],
   );
 
-  const initials = displayName.charAt(0).toUpperCase() || "?";
+  const initials = getPersonaInitials(displayName);
 
   // For new personas, use a temporary ID for the avatar upload
   const avatarPersonaId = persona?.id ?? "new-persona";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+      <DialogContent width="wide" className="max-h-[85vh] gap-0 p-0">
         <DialogHeader className="shrink-0 px-5 py-4">
           <DialogTitle className="text-sm">
             {detailsMode
@@ -209,188 +211,188 @@ export function PersonaEditor({
         </DialogHeader>
 
         {detailsMode ? (
-          <PersonaDetails
-            avatar={avatar}
-            displayName={displayName}
-            modelLabel={modelLabel}
-            personaSource={personaSource}
-            providerLabel={providerLabel}
-            systemPrompt={systemPrompt}
-          />
+          <DialogBody>
+            <PersonaDetails
+              avatar={avatar}
+              displayName={displayName}
+              modelLabel={modelLabel}
+              personaSource={personaSource}
+              providerLabel={providerLabel}
+              systemPrompt={systemPrompt}
+            />
+          </DialogBody>
         ) : (
-          <form
-            id="persona-form"
-            onSubmit={handleSubmit}
-            className="min-h-0 flex-1 overflow-y-auto space-y-4 px-5 pb-5"
-          >
-            <div className="flex justify-center">
-              {isReadOnly ? (
-                <AvatarRoot className="h-16 w-16 border border-border">
-                  <AvatarImage
-                    src={avatarSrc ?? undefined}
-                    alt={t("avatar.previewAlt")}
+          <DialogBody asChild className="space-y-4 px-5 pb-5">
+            <form id="persona-form" onSubmit={handleSubmit}>
+              <div className="flex justify-center">
+                {isReadOnly ? (
+                  <AvatarRoot className="h-16 w-16 border border-border">
+                    <AvatarImage
+                      src={avatarSrc ?? undefined}
+                      alt={t("avatar.previewAlt")}
+                    />
+                    <AvatarFallback className="text-lg font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </AvatarRoot>
+                ) : (
+                  <AvatarDropZone
+                    personaId={avatarPersonaId}
+                    avatar={avatar}
+                    onChange={setAvatar}
+                    disabled={isReadOnly}
                   />
-                  <AvatarFallback className="text-lg font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </AvatarRoot>
-              ) : (
-                <AvatarDropZone
-                  personaId={avatarPersonaId}
-                  avatar={avatar}
-                  onChange={setAvatar}
-                  disabled={isReadOnly}
-                />
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-muted-foreground">
-                {t("editor.displayName")}{" "}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                readOnly={isReadOnly}
-                required
-                placeholder={t("editor.displayNamePlaceholder")}
-                className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
+              <div className="space-y-1">
                 <Label className="text-xs font-medium text-muted-foreground">
-                  {t("editor.systemPrompt")}{" "}
+                  {t("editor.displayName")}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("common:labels.characterCount", {
-                    count: systemPrompt.length,
-                  })}
-                </span>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  readOnly={isReadOnly}
+                  required
+                  placeholder={t("editor.displayNamePlaceholder")}
+                  className={cn(isReadOnly && "opacity-70 cursor-not-allowed")}
+                />
               </div>
-              <Textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                readOnly={isReadOnly}
-                required
-                rows={6}
-                placeholder={t("editor.systemPromptPlaceholder")}
-                className={cn(
-                  "leading-relaxed",
-                  isReadOnly && "opacity-70 cursor-not-allowed",
-                )}
-              />
-            </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-muted-foreground">
-                {t("editor.provider")}
-              </Label>
-              <Select
-                value={provider || "__none__"}
-                onValueChange={(v: string) => {
-                  const nextProvider =
-                    v === "__none__"
-                      ? ("" as ProviderType | "")
-                      : (v as ProviderType);
-                  setProvider(nextProvider);
-                  if (nextProvider !== provider) {
-                    setModel("");
-                  }
-                }}
-                disabled={isReadOnly}
-              >
-                <SelectTrigger
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    {t("editor.systemPrompt")}{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("common:labels.characterCount", {
+                      count: systemPrompt.length,
+                    })}
+                  </span>
+                </div>
+                <Textarea
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  readOnly={isReadOnly}
+                  required
+                  rows={6}
+                  placeholder={t("editor.systemPromptPlaceholder")}
                   className={cn(
-                    "w-full",
+                    "leading-relaxed",
                     isReadOnly && "opacity-70 cursor-not-allowed",
                   )}
-                >
-                  <SelectValue placeholder={t("common:labels.none")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">
-                    {t("common:labels.none")}
-                  </SelectItem>
-                  {acpProviders.map((providerOption) => (
-                    <SelectItem
-                      key={providerOption.id}
-                      value={providerOption.id}
-                    >
-                      {providerOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                />
+              </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-muted-foreground">
-                {t("editor.model")}
-              </Label>
-              <Select
-                value={modelSelectValue}
-                onValueChange={(value: string) => {
-                  if (value === "__none__") {
-                    setModel("");
-                    return;
-                  }
-                  if (value.startsWith("__saved__:")) {
-                    setModel(value.slice("__saved__:".length));
-                    return;
-                  }
-                  setModel(value);
-                }}
-                disabled={isReadOnly || !provider}
-              >
-                <SelectTrigger
-                  className={cn(
-                    "w-full",
-                    isReadOnly && "opacity-70 cursor-not-allowed",
-                  )}
-                >
-                  <SelectValue
-                    placeholder={
-                      provider
-                        ? t("editor.modelPlaceholder")
-                        : t("editor.chooseProviderFirst")
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t("editor.provider")}
+                </Label>
+                <Select
+                  value={provider || "__none__"}
+                  onValueChange={(v: string) => {
+                    const nextProvider =
+                      v === "__none__"
+                        ? ("" as ProviderType | "")
+                        : (v as ProviderType);
+                    setProvider(nextProvider);
+                    if (nextProvider !== provider) {
+                      setModel("");
                     }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">
-                    {t("common:labels.none")}
-                  </SelectItem>
-                  {hasSavedModelOutsideInventory && (
-                    <SelectItem value={`__saved__:${model}`}>
-                      {t("editor.savedModelUnavailable", { model })}
+                  }}
+                  disabled={isReadOnly}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "w-full",
+                      isReadOnly && "opacity-70 cursor-not-allowed",
+                    )}
+                  >
+                    <SelectValue placeholder={t("common:labels.none")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      {t("common:labels.none")}
                     </SelectItem>
-                  )}
-                  {availableModels.map((modelOption) => (
-                    <SelectItem key={modelOption.id} value={modelOption.id}>
-                      {modelOption.displayName ?? modelOption.name}
+                    {acpProviders.map((providerOption) => (
+                      <SelectItem
+                        key={providerOption.id}
+                        value={providerOption.id}
+                      >
+                        {providerOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  {t("editor.model")}
+                </Label>
+                <Select
+                  value={modelSelectValue}
+                  onValueChange={(value: string) => {
+                    if (value === "__none__") {
+                      setModel("");
+                      return;
+                    }
+                    if (value.startsWith("__saved__:")) {
+                      setModel(value.slice("__saved__:".length));
+                      return;
+                    }
+                    setModel(value);
+                  }}
+                  disabled={isReadOnly || !provider}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "w-full",
+                      isReadOnly && "opacity-70 cursor-not-allowed",
+                    )}
+                  >
+                    <SelectValue
+                      placeholder={
+                        provider
+                          ? t("editor.modelPlaceholder")
+                          : t("editor.chooseProviderFirst")
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      {t("common:labels.none")}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasSavedModelOutsideInventory ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {t("editor.savedModelUnavailableHelp")}
-                </p>
-              ) : !provider ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {t("editor.chooseProviderFirst")}
-                </p>
-              ) : availableModels.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {modelStatusMessage ?? t("editor.noModelsAvailable")}
-                </p>
-              ) : null}
-            </div>
-          </form>
+                    {hasSavedModelOutsideInventory && (
+                      <SelectItem value={`__saved__:${model}`}>
+                        {t("editor.savedModelUnavailable", { model })}
+                      </SelectItem>
+                    )}
+                    {availableModels.map((modelOption) => (
+                      <SelectItem key={modelOption.id} value={modelOption.id}>
+                        {modelOption.displayName ?? modelOption.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {hasSavedModelOutsideInventory ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("editor.savedModelUnavailableHelp")}
+                  </p>
+                ) : !provider ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("editor.chooseProviderFirst")}
+                  </p>
+                ) : availableModels.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {modelStatusMessage ?? t("editor.noModelsAvailable")}
+                  </p>
+                ) : null}
+              </div>
+            </form>
+          </DialogBody>
         )}
 
         <DialogFooter className="shrink-0 border-t px-5 py-4">

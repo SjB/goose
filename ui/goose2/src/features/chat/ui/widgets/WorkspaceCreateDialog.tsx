@@ -6,6 +6,7 @@ import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -207,197 +208,195 @@ export function WorkspaceCreateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          id="workspace-create-form"
-          onSubmit={handleSubmit}
-          className="space-y-4 px-5 pb-5"
-        >
-          {mode === "branch" ? (
-            <>
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="workspace-branch-name"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  {t("contextPanel.createDialog.branchName")}
-                </Label>
-                <Input
-                  id="workspace-branch-name"
-                  value={branchName}
-                  onChange={(event) => {
-                    setBranchName(event.target.value);
-                    setError(null);
-                  }}
-                  placeholder={t(
-                    "contextPanel.createDialog.branchNamePlaceholder",
-                  )}
-                />
-              </div>
+        <DialogBody asChild className="space-y-4 px-5 pb-5">
+          <form id="workspace-create-form" onSubmit={handleSubmit}>
+            {mode === "branch" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="workspace-branch-name"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    {t("contextPanel.createDialog.branchName")}
+                  </Label>
+                  <Input
+                    id="workspace-branch-name"
+                    value={branchName}
+                    onChange={(event) => {
+                      setBranchName(event.target.value);
+                      setError(null);
+                    }}
+                    placeholder={t(
+                      "contextPanel.createDialog.branchNamePlaceholder",
+                    )}
+                  />
+                </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  {t("contextPanel.createDialog.baseBranch")}
-                </Label>
-                <Select value={baseBranch} onValueChange={setBaseBranch}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={t("contextPanel.createDialog.baseBranch")}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gitState.localBranches.map((branch) => (
-                      <SelectItem key={branch} value={branch}>
-                        {branch}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          ) : null}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    {t("contextPanel.createDialog.baseBranch")}
+                  </Label>
+                  <Select value={baseBranch} onValueChange={setBaseBranch}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={t("contextPanel.createDialog.baseBranch")}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gitState.localBranches.map((branch) => (
+                        <SelectItem key={branch} value={branch}>
+                          {branch}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            ) : null}
 
-          {mode === "worktree" ? (
-            <>
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="workspace-worktree-name"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  {t("contextPanel.createDialog.worktreeName")}
-                </Label>
-                <Input
-                  id="workspace-worktree-name"
-                  value={worktreeName}
-                  onChange={(event) => {
-                    const nextWorktreeName = event.target.value;
-                    setWorktreeName(nextWorktreeName);
-                    if (useNewBranch && !branchNameManuallyEdited) {
-                      setBranchName(nextWorktreeName);
-                    }
-                    setError(null);
-                  }}
-                  placeholder={t(
-                    "contextPanel.createDialog.worktreeNamePlaceholder",
-                  )}
-                />
-                {previewPath ? (
-                  <p className="text-xxs text-muted-foreground">
-                    {t("contextPanel.createDialog.worktreePath", {
-                      path: previewPath,
-                    })}
-                  </p>
-                ) : null}
-              </div>
-
-              {availableExistingBranches.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="workspace-create-new-branch"
-                    checked={useNewBranch}
-                    onCheckedChange={(checked) => {
-                      const nextUseNewBranch = checked === true;
-                      setUseNewBranch(nextUseNewBranch);
-                      if (nextUseNewBranch && !branchNameManuallyEdited) {
-                        setBranchName(worktreeName);
+            {mode === "worktree" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="workspace-worktree-name"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    {t("contextPanel.createDialog.worktreeName")}
+                  </Label>
+                  <Input
+                    id="workspace-worktree-name"
+                    value={worktreeName}
+                    onChange={(event) => {
+                      const nextWorktreeName = event.target.value;
+                      setWorktreeName(nextWorktreeName);
+                      if (useNewBranch && !branchNameManuallyEdited) {
+                        setBranchName(nextWorktreeName);
                       }
                       setError(null);
                     }}
+                    placeholder={t(
+                      "contextPanel.createDialog.worktreeNamePlaceholder",
+                    )}
                   />
-                  <Label
-                    htmlFor="workspace-create-new-branch"
-                    className="cursor-pointer text-xs font-medium text-muted-foreground"
-                  >
-                    {t("contextPanel.createDialog.createNewBranch")}
-                  </Label>
+                  {previewPath ? (
+                    <p className="text-xxs text-muted-foreground">
+                      {t("contextPanel.createDialog.worktreePath", {
+                        path: previewPath,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
-              ) : null}
 
-              {useNewBranch ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="workspace-worktree-branch-name"
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      {t("contextPanel.createDialog.branchName")}
-                    </Label>
-                    <Input
-                      id="workspace-worktree-branch-name"
-                      value={branchName}
-                      onChange={(event) => {
-                        setBranchNameManuallyEdited(true);
-                        setBranchName(event.target.value);
+                {availableExistingBranches.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="workspace-create-new-branch"
+                      checked={useNewBranch}
+                      onCheckedChange={(checked) => {
+                        const nextUseNewBranch = checked === true;
+                        setUseNewBranch(nextUseNewBranch);
+                        if (nextUseNewBranch && !branchNameManuallyEdited) {
+                          setBranchName(worktreeName);
+                        }
                         setError(null);
                       }}
-                      placeholder={t(
-                        "contextPanel.createDialog.branchNamePlaceholder",
-                      )}
                     />
+                    <Label
+                      htmlFor="workspace-create-new-branch"
+                      className="cursor-pointer text-xs font-medium text-muted-foreground"
+                    >
+                      {t("contextPanel.createDialog.createNewBranch")}
+                    </Label>
                   </div>
+                ) : null}
 
+                {useNewBranch ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="workspace-worktree-branch-name"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        {t("contextPanel.createDialog.branchName")}
+                      </Label>
+                      <Input
+                        id="workspace-worktree-branch-name"
+                        value={branchName}
+                        onChange={(event) => {
+                          setBranchNameManuallyEdited(true);
+                          setBranchName(event.target.value);
+                          setError(null);
+                        }}
+                        placeholder={t(
+                          "contextPanel.createDialog.branchNamePlaceholder",
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">
+                        {t("contextPanel.createDialog.baseBranch")}
+                      </Label>
+                      <Select value={baseBranch} onValueChange={setBaseBranch}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={t(
+                              "contextPanel.createDialog.baseBranch",
+                            )}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gitState.localBranches.map((branch) => (
+                            <SelectItem key={branch} value={branch}>
+                              {branch}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : (
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">
-                      {t("contextPanel.createDialog.baseBranch")}
+                      {t("contextPanel.createDialog.branchToOpen")}
                     </Label>
-                    <Select value={baseBranch} onValueChange={setBaseBranch}>
+                    <Select
+                      value={existingBranch || UNSET_SELECT_VALUE}
+                      onValueChange={(value) =>
+                        setExistingBranch(
+                          value === UNSET_SELECT_VALUE ? "" : value,
+                        )
+                      }
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={t(
-                            "contextPanel.createDialog.baseBranch",
+                            "contextPanel.createDialog.branchToOpen",
                           )}
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {gitState.localBranches.map((branch) => (
-                          <SelectItem key={branch} value={branch}>
-                            {branch}
+                        {availableExistingBranches.length > 0 ? (
+                          availableExistingBranches.map((branch) => (
+                            <SelectItem key={branch} value={branch}>
+                              {branch}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem disabled value={UNSET_SELECT_VALUE}>
+                            {t("contextPanel.createDialog.noAvailableBranches")}
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
-                </>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    {t("contextPanel.createDialog.branchToOpen")}
-                  </Label>
-                  <Select
-                    value={existingBranch || UNSET_SELECT_VALUE}
-                    onValueChange={(value) =>
-                      setExistingBranch(
-                        value === UNSET_SELECT_VALUE ? "" : value,
-                      )
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue
-                        placeholder={t(
-                          "contextPanel.createDialog.branchToOpen",
-                        )}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableExistingBranches.length > 0 ? (
-                        availableExistingBranches.map((branch) => (
-                          <SelectItem key={branch} value={branch}>
-                            {branch}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem disabled value={UNSET_SELECT_VALUE}>
-                          {t("contextPanel.createDialog.noAvailableBranches")}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </>
-          ) : null}
+                )}
+              </>
+            ) : null}
 
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
-        </form>
+            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          </form>
+        </DialogBody>
 
         <DialogFooter className="border-t px-5 py-4">
           <Button

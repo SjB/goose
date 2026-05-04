@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -83,7 +84,7 @@ export function ExtensionModal({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="ext-name">{t("extensions.fields.name")}</Label>
               <Input
@@ -224,7 +225,7 @@ export function ExtensionModal({
                 </Button>
               </div>
             </div>
-          </div>
+          </DialogBody>
 
           <DialogFooter>
             {isEdit && onDelete && (

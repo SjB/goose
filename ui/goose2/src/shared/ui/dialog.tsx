@@ -1,8 +1,16 @@
-import type * as React from "react";
+import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Slot } from "@radix-ui/react-slot";
 import { XIcon } from "lucide-react";
 
 import { cn } from "@/shared/lib/cn";
+
+type DialogWidth = "compact" | "wide";
+
+const dialogWidthClassName: Record<DialogWidth, string> = {
+  compact: "max-w-lg",
+  wide: "max-w-2xl",
+};
 
 function Dialog({
   ...props
@@ -28,6 +36,26 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
+function hasDialogBody(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement(child)) {
+      return false;
+    }
+
+    if (child.type === DialogBody) {
+      return true;
+    }
+
+    if (child.type === React.Fragment) {
+      return hasDialogBody(
+        (child.props as { children?: React.ReactNode }).children,
+      );
+    }
+
+    return false;
+  });
+}
+
 function DialogOverlay({
   className,
   ...props
@@ -50,12 +78,16 @@ function DialogContent({
   overlayClassName,
   positionerClassName,
   showCloseButton = true,
+  width = "compact",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   overlayClassName?: string;
   positionerClassName?: string;
   showCloseButton?: boolean;
+  width?: DialogWidth;
 }) {
+  const hasScrollableBody = hasDialogBody(children);
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay className={overlayClassName} />
@@ -69,7 +101,11 @@ function DialogContent({
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
-            "pointer-events-auto relative grid max-h-[calc(100dvh-2rem)] w-full max-w-lg gap-4 overflow-y-auto rounded-modal border bg-background p-6 shadow-modal data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+            "pointer-events-auto relative max-h-[calc(100dvh-2rem)] w-full gap-4 rounded-modal border bg-background p-6 shadow-modal data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+            dialogWidthClassName[width],
+            hasScrollableBody
+              ? "flex flex-col overflow-hidden"
+              : "grid overflow-y-auto",
             className,
           )}
           {...props}
@@ -84,6 +120,24 @@ function DialogContent({
         </DialogPrimitive.Content>
       </div>
     </DialogPortal>
+  );
+}
+
+function DialogBody({
+  className,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"div"> & {
+  asChild?: boolean;
+}) {
+  const Comp = asChild ? Slot : "div";
+
+  return (
+    <Comp
+      data-slot="dialog-body"
+      className={cn("min-h-0 flex-1 overflow-y-auto", className)}
+      {...props}
+    />
   );
 }
 
@@ -141,6 +195,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

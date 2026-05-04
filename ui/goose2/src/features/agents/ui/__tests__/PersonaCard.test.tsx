@@ -22,19 +22,35 @@ describe("PersonaCard", () => {
     expect(screen.getByText("Coder")).toBeInTheDocument();
   });
 
-  it("shows built-in badge", () => {
+  it("shows featured badge for built-in personas", () => {
     render(<PersonaCard persona={makePersona({ isBuiltin: true })} />);
-    expect(screen.getByText("Built-in")).toBeInTheDocument();
+    expect(screen.getByText("Featured")).toBeInTheDocument();
   });
 
-  it("does not show built-in badge for custom personas", () => {
+  it("does not show featured badge for custom personas", () => {
     render(<PersonaCard persona={makePersona({ isBuiltin: false })} />);
-    expect(screen.queryByText("Built-in")).not.toBeInTheDocument();
+    expect(screen.queryByText("Featured")).not.toBeInTheDocument();
   });
 
-  it("shows avatar with initial", () => {
+  it("shows avatar with one initial for single-word names", () => {
     render(<PersonaCard persona={makePersona({ displayName: "Alpha" })} />);
     expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("shows avatar with two initials for multi-word names", () => {
+    render(
+      <PersonaCard persona={makePersona({ displayName: "Code Reviewer" })} />,
+    );
+    expect(screen.getByText("CR")).toBeInTheDocument();
+  });
+
+  it("skips punctuation when building initials", () => {
+    render(
+      <PersonaCard
+        persona={makePersona({ displayName: "404Portfolio (Copy)" })}
+      />,
+    );
+    expect(screen.getByText("4C")).toBeInTheDocument();
   });
 
   it("shows system prompt preview", () => {

@@ -11,6 +11,8 @@
   },
   "card": {
     "ariaLabel": "Agente: {{name}}",
+    "custom": "Personalizado",
+    "featured": "Destacado",
     "fileBacked": "Desde archivo",
     "options": "Opciones del agente"
   },
@@ -57,7 +59,9 @@
     "createAria": "Crear nuevo agente",
     "dropFile": "o suelta un archivo",
     "loading": "Cargando agentes",
-    "new": "Nuevo agente"
+    "new": "Nuevo agente",
+    "noResults": "No se encontraron agentes",
+    "noResultsDescription": "Prueba con otro nombre, prompt, proveedor o modelo."
   },
   "statuses": {
     "error": "Error",
@@ -67,6 +71,8 @@
   },
   "view": {
     "copyName": "{{name}} (Copia)",
+    "backToAgents": "Volver a agentes",
+    "created": "Creado",
     "deleteFailed": "No se pudo eliminar el agente.",
     "deleteDescription": "Este agente y su configuración se eliminarán de forma permanente.",
     "deleteTitle": "¿Eliminar \"{{name}}\" de forma permanente?",
@@ -81,9 +87,12 @@
     "importFailed": "No se pudo importar el agente.",
     "imported_one": "Se importó {{count}} agente.",
     "imported_other": "Se importaron {{count}} agentes.",
+    "more": "Más",
     "newPersona": "Nuevo agente",
     "optionsAria": "Opciones de {{name}}",
     "searchPlaceholder": "Buscar agentes...",
-    "title": "Agentes"
+    "source": "Origen",
+    "title": "Agentes",
+    "updated": "Actualizado"
   }
 }

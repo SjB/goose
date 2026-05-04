@@ -6,6 +6,7 @@ import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -104,75 +105,73 @@ export function SkillEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+      <DialogContent className="max-w-lg max-h-[85vh] gap-0 p-0">
         <DialogHeader className="shrink-0 px-5 py-4">
           <DialogTitle className="text-sm">
             {isEditing ? t("dialog.editTitle") : t("dialog.newTitle")}
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          id="skill-form"
-          onSubmit={handleSave}
-          className="min-h-0 flex-1 overflow-y-auto space-y-4 px-5 pb-5"
-        >
-          {/* Name */}
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.name")} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder={t("dialog.namePlaceholder")}
-            />
-            {name.length > 0 && !nameValid && (
-              <p className="text-xs text-destructive">
-                {t("dialog.nameValidation")}
+        <DialogBody asChild className="space-y-4 px-5 pb-5">
+          <form id="skill-form" onSubmit={handleSave}>
+            {/* Name */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.name")} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder={t("dialog.namePlaceholder")}
+              />
+              {name.length > 0 && !nameValid && (
+                <p className="text-xs text-destructive">
+                  {t("dialog.nameValidation")}
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.description")}{" "}
+                <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setError(null);
+                }}
+                placeholder={t("dialog.descriptionPlaceholder")}
+              />
+            </div>
+
+            {isEditing && editingSkill ? (
+              <p className="-mt-2 break-all text-[11px] text-muted-foreground">
+                {t("dialog.pathOnDisk")}:{" "}
+                {getRenamedSkillFileLocation(editingSkill.fileLocation, name)}
               </p>
-            )}
-          </div>
+            ) : null}
 
-          {/* Description */}
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.description")}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setError(null);
-              }}
-              placeholder={t("dialog.descriptionPlaceholder")}
-            />
-          </div>
+            {/* Instructions */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.instructions")}
+              </Label>
+              <Textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={10}
+                placeholder={t("dialog.instructionsPlaceholder")}
+                className="text-xs font-mono leading-relaxed"
+              />
+            </div>
 
-          {isEditing && editingSkill ? (
-            <p className="-mt-2 break-all text-[11px] text-muted-foreground">
-              {t("dialog.pathOnDisk")}:{" "}
-              {getRenamedSkillFileLocation(editingSkill.fileLocation, name)}
-            </p>
-          ) : null}
-
-          {/* Instructions */}
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.instructions")}
-            </Label>
-            <Textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={10}
-              placeholder={t("dialog.instructionsPlaceholder")}
-              className="text-xs font-mono leading-relaxed"
-            />
-          </div>
-
-          {/* Error */}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </form>
+            {/* Error */}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </form>
+        </DialogBody>
 
         <DialogFooter className="shrink-0 border-t px-5 py-4">
           <Button

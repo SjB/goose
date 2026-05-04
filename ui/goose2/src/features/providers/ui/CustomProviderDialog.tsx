@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -287,7 +288,7 @@ export function CustomProviderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
@@ -299,7 +300,7 @@ export function CustomProviderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {renderContent()}
+        <DialogBody>{renderContent()}</DialogBody>
       </DialogContent>
     </Dialog>
   );

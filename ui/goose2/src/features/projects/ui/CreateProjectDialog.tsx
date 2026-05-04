@@ -8,6 +8,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -224,109 +225,107 @@ export function CreateProjectDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+      <DialogContent className="max-w-lg max-h-[85vh] gap-0 p-0">
         <DialogHeader className="shrink-0 px-5 py-4">
           <DialogTitle className="text-sm">
             {isEditing ? t("dialog.editTitle") : t("dialog.newTitle")}
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          id="project-form"
-          onSubmit={handleSave}
-          className="min-h-0 flex-1 overflow-y-auto space-y-4 px-5 pb-5"
-        >
-          {/* Name */}
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.name")} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError(null);
-              }}
-              placeholder={t("dialog.namePlaceholder")}
+        <DialogBody asChild className="space-y-4 px-5 pb-5">
+          <form id="project-form" onSubmit={handleSave}>
+            {/* Name */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.name")} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError(null);
+                }}
+                placeholder={t("dialog.namePlaceholder")}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.instructions")}
+              </Label>
+              <PromptEditor
+                value={prompt}
+                onChange={setPrompt}
+                ariaLabel={t("dialog.instructions")}
+                placeholder={t("dialog.instructionsPlaceholder")}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onClick={handleAddDirectory}
+                className="mt-1.5"
+              >
+                <IconFolderOpen className="size-3.5" />
+                {t("dialog.addDirectory")}
+              </Button>
+            </div>
+
+            <ProjectIconPicker
+              icon={icon}
+              iconCandidates={iconCandidates}
+              iconScanPending={iconScanPending}
+              error={iconError}
+              onChooseIcon={chooseIcon}
+              onChooseCustomIcon={handleChooseCustomIcon}
             />
-          </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.instructions")}
-            </Label>
-            <PromptEditor
-              value={prompt}
-              onChange={setPrompt}
-              ariaLabel={t("dialog.instructions")}
-              placeholder={t("dialog.instructionsPlaceholder")}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={handleAddDirectory}
-              className="mt-1.5"
-            >
-              <IconFolderOpen className="size-3.5" />
-              {t("dialog.addDirectory")}
-            </Button>
-          </div>
-
-          <ProjectIconPicker
-            icon={icon}
-            iconCandidates={iconCandidates}
-            iconScanPending={iconScanPending}
-            error={iconError}
-            onChooseIcon={chooseIcon}
-            onChooseCustomIcon={handleChooseCustomIcon}
-          />
-
-          {/* Provider */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">
-              {t("dialog.provider")}
-            </Label>
-            <Select
-              value={preferredProvider ?? "__none__"}
-              onValueChange={(v) =>
-                setPreferredProvider(v === "__none__" ? null : v)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("dialog.noneUseDefault")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">
-                  {t("dialog.noneUseDefault")}
-                </SelectItem>
-                {acpProviders.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.label}
+            {/* Provider */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("dialog.provider")}
+              </Label>
+              <Select
+                value={preferredProvider ?? "__none__"}
+                onValueChange={(v) =>
+                  setPreferredProvider(v === "__none__" ? null : v)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("dialog.noneUseDefault")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">
+                    {t("dialog.noneUseDefault")}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {acpProviders.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Use Worktrees */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="use-worktrees"
-              checked={useWorktrees}
-              onCheckedChange={(checked) => setUseWorktrees(checked === true)}
-            />
-            <Label
-              htmlFor="use-worktrees"
-              className="text-xs font-medium text-muted-foreground cursor-pointer"
-            >
-              {t("dialog.useWorktrees")}
-            </Label>
-          </div>
+            {/* Use Worktrees */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="use-worktrees"
+                checked={useWorktrees}
+                onCheckedChange={(checked) => setUseWorktrees(checked === true)}
+              />
+              <Label
+                htmlFor="use-worktrees"
+                className="text-xs font-medium text-muted-foreground cursor-pointer"
+              >
+                {t("dialog.useWorktrees")}
+              </Label>
+            </div>
 
-          {/* Error */}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </form>
+            {/* Error */}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </form>
+        </DialogBody>
 
         <DialogFooter className="shrink-0 border-t px-5 py-4">
           <Button

@@ -11,6 +11,8 @@
   },
   "card": {
     "ariaLabel": "Agent: {{name}}",
+    "custom": "Custom",
+    "featured": "Featured",
     "fileBacked": "File-backed",
     "options": "Agent options"
   },
@@ -57,7 +59,9 @@
     "createAria": "Create new agent",
     "dropFile": "or drop a file",
     "loading": "Loading agents",
-    "new": "New Agent"
+    "new": "New Agent",
+    "noResults": "No agents found",
+    "noResultsDescription": "Try a different name, prompt, provider, or model."
   },
   "statuses": {
     "error": "Error",
@@ -67,6 +71,8 @@
   },
   "view": {
     "copyName": "{{name}} (Copy)",
+    "backToAgents": "Back to agents",
+    "created": "Created",
     "deleteFailed": "Failed to delete agent.",
     "deleteDescription": "This agent and its configuration will be permanently removed.",
     "deleteTitle": "Delete \"{{name}}\" permanently?",
@@ -81,9 +87,12 @@
     "importFailed": "Failed to import agent.",
     "imported_one": "Imported {{count}} agent.",
     "imported_other": "Imported {{count}} agents.",
+    "more": "More",
     "newPersona": "New Agent",
     "optionsAria": "Options for {{name}}",
     "searchPlaceholder": "Search agents...",
-    "title": "Agents"
+    "source": "Source",
+    "title": "Agents",
+    "updated": "Updated"
   }
 }

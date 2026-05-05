@@ -20,13 +20,13 @@ pub fn parse_frontmatter<T: for<'de> Deserialize<'de>>(
 ) -> Result<Option<(T, String)>, serde_yaml::Error> {
     let content = content.trim_start();
     let mut lines = content.lines();
-    if lines.next() != Some("---") {
+    if !lines.next().is_some_and(is_frontmatter_delimiter) {
         return Ok(None);
     }
 
     let mut yaml_lines = Vec::new();
     for line in &mut lines {
-        if line == "---" {
+        if is_frontmatter_delimiter(line) {
             let yaml_content = yaml_lines.join("\n");
             let metadata: T = serde_yaml::from_str(yaml_content.trim())?;
             let body = lines.collect::<Vec<_>>().join("\n").trim().to_string();
@@ -36,6 +36,10 @@ pub fn parse_frontmatter<T: for<'de> Deserialize<'de>>(
     }
 
     Ok(None)
+}
+
+fn is_frontmatter_delimiter(line: &str) -> bool {
+    line.trim_end_matches('\r') == "---"
 }
 
 pub type SourceMetadata = BTreeMap<String, serde_json::Value>;
@@ -237,6 +241,14 @@ fn mapping_to_metadata(frontmatter: Mapping) -> Result<SourceMetadata, Error> {
     Ok(metadata)
 }
 
+fn sanitize_agent_metadata(metadata: &SourceMetadata) -> SourceMetadata {
+    metadata
+        .iter()
+        .filter(|(key, _)| !RESERVED_AGENT_METADATA_KEYS.contains(&key.as_str()))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect()
+}
+
 fn global_agents_dir() -> Result<PathBuf, Error> {
     dirs::home_dir()
         .map(|h| h.join(".agents").join("agents"))
@@ -383,11 +395,12 @@ fn create_agent_source(
     let slug = slugify_agent_name(name)?;
     let base = agent_base_dir(global, project_dir)?;
     let path = base.join(format!("{slug}.md"));
+    let sanitized_metadata = metadata.map(sanitize_agent_metadata);
 
     fs::create_dir_all(&base).map_err(|e| {
         Error::internal_error().data(format!("Failed to create source directory: {e}"))
     })?;
-    let md = build_agent_md(name, description, content, metadata)?;
+    let md = build_agent_md(name, description, content, sanitized_metadata.as_ref())?;
     write_new_file(&path, &md, source_already_exists(name))?;
 
     Ok(source_entry(
@@ -395,7 +408,7 @@ fn create_agent_source(
         name,
         description,
         content,
-        metadata.cloned(),
+        sanitized_metadata,
         &path,
         global,
     ))
@@ -410,7 +423,7 @@ fn update_agent_source(
 ) -> Result<SourceEntry, Error> {
     let current_path = resolve_agent_file(path)?;
     let existing = read_agent_file(&current_path, is_global_agent_file(&current_path))?;
-    let effective_metadata = metadata.cloned().or(existing.metadata);
+    let effective_metadata = metadata.map(sanitize_agent_metadata).or(existing.metadata);
     let slug = slugify_agent_name(name)?;
     let target_path = current_path
         .parent()
@@ -786,6 +799,16 @@ mod tests {
     }
 
     #[test]
+    fn parse_frontmatter_accepts_crlf_delimiters() {
+        let raw = "---\r\nname: Windows Agent\r\ndescription: crlf\r\n---\r\nbody\r\n";
+        let parsed = parse_agent_markdown(raw).unwrap().unwrap();
+
+        assert_eq!(parsed.frontmatter.name, "Windows Agent");
+        assert_eq!(parsed.frontmatter.description.as_deref(), Some("crlf"));
+        assert_eq!(parsed.body, "body");
+    }
+
+    #[test]
     fn create_list_update_delete_project_skill() {
         let tmp = TempDir::new().unwrap();
         let project = tmp.path().to_str().unwrap();
@@ -930,6 +953,12 @@ mod tests {
             Some(project_dir),
         )
         .unwrap();
+        assert!(!created.metadata.as_ref().unwrap().contains_key("name"));
+        assert!(!created
+            .metadata
+            .as_ref()
+            .unwrap()
+            .contains_key("description"));
         let raw = std::fs::read_to_string(&created.directory).unwrap();
         assert!(raw.contains("model: gpt-4o"));
         assert!(raw.contains("tools:"));
@@ -955,6 +984,7 @@ mod tests {
 
         let mut replacement = SourceMetadata::new();
         replacement.insert("model".to_string(), serde_json::json!("claude"));
+        replacement.insert("name".to_string(), serde_json::json!("ignored again"));
         let updated = update_source(
             SourceType::Agent,
             updated.directory.as_str(),
@@ -968,6 +998,7 @@ mod tests {
             updated.metadata.as_ref().unwrap().get("model"),
             Some(&serde_json::json!("claude"))
         );
+        assert!(!updated.metadata.as_ref().unwrap().contains_key("name"));
         assert!(!updated.metadata.as_ref().unwrap().contains_key("tools"));
     }
 

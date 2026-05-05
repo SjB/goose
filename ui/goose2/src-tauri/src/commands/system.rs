@@ -103,6 +103,24 @@ fn has_sequence_with_remaining(path: &Path, sequence: &[&str], remaining: usize)
         })
 }
 
+fn has_sequence_with_min_remaining(
+    path: &Path,
+    sequence: &[&str],
+    minimum_remaining: usize,
+) -> bool {
+    let components = path_components(path);
+    components
+        .windows(sequence.len())
+        .enumerate()
+        .any(|(index, window)| {
+            window
+                .iter()
+                .map(String::as_str)
+                .eq(sequence.iter().copied())
+                && components.len() >= index + sequence.len() + minimum_remaining
+        })
+}
+
 fn is_shareable_agent_file(path: &Path) -> bool {
     path.extension().and_then(|extension| extension.to_str()) == Some("md")
         && (has_sequence_with_remaining(path, &[".agents", "agents"], 1)
@@ -111,11 +129,11 @@ fn is_shareable_agent_file(path: &Path) -> bool {
 
 fn is_shareable_skill_file(path: &Path) -> bool {
     path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md")
-        && (has_sequence_with_remaining(path, &[".agents", "skills"], 2)
-            || has_sequence_with_remaining(path, &[".goose", "skills"], 2)
-            || has_sequence_with_remaining(path, &[".claude", "skills"], 2)
-            || has_sequence_with_remaining(path, &[".config", "agents", "skills"], 2)
-            || has_sequence_with_remaining(path, &["goose", "skills"], 2)
+        && (has_sequence_with_min_remaining(path, &[".agents", "skills"], 2)
+            || has_sequence_with_min_remaining(path, &[".goose", "skills"], 2)
+            || has_sequence_with_min_remaining(path, &[".claude", "skills"], 2)
+            || has_sequence_with_min_remaining(path, &[".config", "agents", "skills"], 2)
+            || has_sequence_with_min_remaining(path, &["goose", "skills"], 2)
             || is_plugin_skill_file(path))
 }
 
@@ -125,7 +143,7 @@ fn is_plugin_skill_file(path: &Path) -> bool {
         window[0] == "goose"
             && window[1] == "plugins"
             && window[3] == "skills"
-            && components.len() == index + 6
+            && components.len() >= index + 6
     })
 }
 

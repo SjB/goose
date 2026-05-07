@@ -11,7 +11,7 @@ import type {
 const AGENT_SOURCE_TYPE = "agent" as const;
 const AGENT_DESCRIPTION = "Agent";
 
-type AgentSourceMetadata = {
+type AgentSourceProperties = {
   provider?: string;
   model?: string;
   avatar?: string;
@@ -19,34 +19,34 @@ type AgentSourceMetadata = {
 
 type AgentSourceEntry = SourceEntry & {
   type: typeof AGENT_SOURCE_TYPE;
-  metadata?: AgentSourceMetadata | null;
+  properties: AgentSourceProperties;
 };
 
 function isAgentSource(source: SourceEntry): source is AgentSourceEntry {
   return source.type === AGENT_SOURCE_TYPE;
 }
 
-function avatarToMetadata(
+function avatarToProperty(
   avatar: Avatar | null | undefined,
 ): string | undefined {
   if (!avatar) return undefined;
   return avatar.value;
 }
 
-function metadataToAvatar(value: string | undefined): Avatar | null {
+function propertyToAvatar(value: string | undefined): Avatar | null {
   if (!value) return null;
   return { type: "url", value };
 }
 
-function personaMetadata(
+function personaProperties(
   request: CreatePersonaRequest | UpdatePersonaRequest,
-): AgentSourceMetadata | undefined {
-  const metadata: AgentSourceMetadata = {};
-  if (request.provider) metadata.provider = request.provider;
-  if (request.model) metadata.model = request.model;
-  const avatar = avatarToMetadata(request.avatar);
-  if (avatar) metadata.avatar = avatar;
-  return Object.keys(metadata).length > 0 ? metadata : undefined;
+): AgentSourceProperties | undefined {
+  const properties: AgentSourceProperties = {};
+  if (request.provider) properties.provider = request.provider;
+  if (request.model) properties.model = request.model;
+  const avatar = avatarToProperty(request.avatar);
+  if (avatar) properties.avatar = avatar;
+  return properties;
 }
 
 function toPersona(source: AgentSourceEntry): Persona {
@@ -54,10 +54,10 @@ function toPersona(source: AgentSourceEntry): Persona {
   return {
     id: source.path,
     displayName: source.name,
-    avatar: metadataToAvatar(source.metadata?.avatar),
+    avatar: propertyToAvatar(source.properties?.avatar),
     systemPrompt: source.content,
-    provider: source.metadata?.provider,
-    model: source.metadata?.model,
+    provider: source.properties?.provider,
+    model: source.properties?.model,
     isBuiltin: !writable,
     isFromDisk: writable,
     writable,
@@ -97,7 +97,7 @@ export async function createPersona(
     name: request.displayName,
     description: AGENT_DESCRIPTION,
     content: request.systemPrompt,
-    metadata: personaMetadata(request),
+    properties: personaProperties(request),
     global: true,
   });
 
@@ -118,11 +118,11 @@ export async function updatePersona(
     displayName: request.displayName ?? existing.name,
     avatar:
       request.avatar === undefined
-        ? metadataToAvatar(existing.metadata?.avatar)
+        ? propertyToAvatar(existing.properties?.avatar)
         : request.avatar,
     systemPrompt: request.systemPrompt ?? existing.content,
-    provider: request.provider ?? existing.metadata?.provider,
-    model: request.model ?? existing.metadata?.model,
+    provider: request.provider ?? existing.properties?.provider,
+    model: request.model ?? existing.properties?.model,
   };
   const response = await client.goose.GooseSourcesUpdate({
     type: AGENT_SOURCE_TYPE,
@@ -130,7 +130,7 @@ export async function updatePersona(
     name: merged.displayName,
     description: existing.description || AGENT_DESCRIPTION,
     content: merged.systemPrompt,
-    metadata: personaMetadata(merged),
+    properties: personaProperties(merged),
   });
 
   if (!isAgentSource(response.source)) {
@@ -192,7 +192,7 @@ export async function importPersonas(
           description: AGENT_DESCRIPTION,
           content:
             parsed.systemPrompt ?? parsed.content ?? parsed.instructions ?? "",
-          metadata: {
+          properties: {
             provider: parsed.provider,
             model: parsed.model,
             avatar:

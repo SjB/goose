@@ -13,7 +13,9 @@
           "default": null
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Add an extension to an active session.",
       "x-side": "agent",
       "x-method": "_goose/extensions/add"
@@ -33,7 +35,10 @@
           "type": "string"
         }
       },
-      "required": ["sessionId", "name"],
+      "required": [
+        "sessionId",
+        "name"
+      ],
       "description": "Remove an extension from an active session.",
       "x-side": "agent",
       "x-method": "_goose/extensions/remove"
@@ -45,7 +50,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "List all tools available in a session.",
       "x-side": "agent",
       "x-method": "_goose/tools"
@@ -59,7 +66,9 @@
           "description": "Array of tool info objects with `name`, `description`, `parameters`, and optional `permission`."
         }
       },
-      "required": ["tools"],
+      "required": [
+        "tools"
+      ],
       "description": "Tools response.",
       "x-side": "agent",
       "x-method": "_goose/tools"
@@ -77,7 +86,10 @@
           "default": null
         }
       },
-      "required": ["sessionId", "name"],
+      "required": [
+        "sessionId",
+        "name"
+      ],
       "description": "Call a tool from an extension.",
       "x-side": "agent",
       "x-method": "_goose/tool/call"
@@ -96,7 +108,9 @@
         },
         "_meta": {}
       },
-      "required": ["isError"],
+      "required": [
+        "isError"
+      ],
       "description": "Tool call response.",
       "x-side": "agent",
       "x-method": "_goose/tool/call"
@@ -114,7 +128,11 @@
           "type": "string"
         }
       },
-      "required": ["sessionId", "uri", "extensionName"],
+      "required": [
+        "sessionId",
+        "uri",
+        "extensionName"
+      ],
       "description": "Read a resource from an extension.",
       "x-side": "agent",
       "x-method": "_goose/resource/read"
@@ -141,7 +159,10 @@
           "type": "string"
         }
       },
-      "required": ["sessionId", "workingDir"],
+      "required": [
+        "sessionId",
+        "workingDir"
+      ],
       "description": "Update the working directory for a session.",
       "x-side": "agent",
       "x-method": "_goose/working_dir/update"
@@ -153,7 +174,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Delete a session.",
       "x-side": "agent",
       "x-method": "session/delete"
@@ -179,7 +202,10 @@
           }
         }
       },
-      "required": ["extensions", "warnings"],
+      "required": [
+        "extensions",
+        "warnings"
+      ],
       "description": "List configured extensions and any warnings.",
       "x-side": "agent",
       "x-method": "_goose/config/extensions"
@@ -199,7 +225,9 @@
           "default": false
         }
       },
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "description": "Persist a new extension to the user's global goose config.",
       "x-side": "agent",
       "x-method": "_goose/config/extensions/add"
@@ -211,7 +239,9 @@
           "type": "string"
         }
       },
-      "required": ["configKey"],
+      "required": [
+        "configKey"
+      ],
       "description": "Remove a persisted extension from the user's global goose config.",
       "x-side": "agent",
       "x-method": "_goose/config/extensions/remove"
@@ -226,7 +256,10 @@
           "type": "boolean"
         }
       },
-      "required": ["configKey", "enabled"],
+      "required": [
+        "configKey",
+        "enabled"
+      ],
       "description": "Toggle the `enabled` flag for a persisted extension in the user's global goose config.",
       "x-side": "agent",
       "x-method": "_goose/config/extensions/toggle"
@@ -238,7 +271,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "x-side": "agent",
       "x-method": "_goose/session/extensions"
     },
@@ -250,7 +285,9 @@
           "items": {}
         }
       },
-      "required": ["extensions"],
+      "required": [
+        "extensions"
+      ],
       "x-side": "agent",
       "x-method": "_goose/session/extensions"
     },
@@ -280,7 +317,9 @@
           }
         }
       },
-      "required": ["entries"],
+      "required": [
+        "entries"
+      ],
       "description": "Provider list response.",
       "x-side": "agent",
       "x-method": "_goose/providers/list"
@@ -346,15 +385,24 @@
           "description": "The list of available models."
         },
         "lastUpdatedAt": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "When this entry was last successfully refreshed (ISO 8601)."
         },
         "lastRefreshAttemptAt": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "When a refresh was most recently attempted (ISO 8601)."
         },
         "lastRefreshError": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "The last refresh failure message, if any."
         },
         "stale": {
@@ -362,7 +410,10 @@
           "description": "Whether we believe this data may be outdated."
         },
         "modelSelectionHint": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Guidance message shown when this provider manages its own model selection externally."
         }
       },
@@ -385,7 +436,10 @@
     },
     "ProviderSetupCategoryDto": {
       "type": "string",
-      "enum": ["agent", "model"]
+      "enum": [
+        "agent",
+        "model"
+      ]
     },
     "ProviderConfigKey": {
       "type": "object",
@@ -400,7 +454,10 @@
           "type": "boolean"
         },
         "default": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "default": null
         },
         "oauthFlow": {
@@ -416,7 +473,11 @@
           "default": false
         }
       },
-      "required": ["name", "required", "secret"]
+      "required": [
+        "name",
+        "required",
+        "secret"
+      ]
     },
     "ProviderInventoryModelDto": {
       "type": "object",
@@ -430,17 +491,26 @@
           "description": "Human-readable display name."
         },
         "family": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Model family for grouping in UI."
         },
         "contextLimit": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0,
           "description": "Context window size in tokens."
         },
         "reasoning": {
-          "type": ["boolean", "null"],
+          "type": [
+            "boolean",
+            "null"
+          ],
           "description": "Whether the model supports reasoning/extended thinking."
         },
         "recommended": {
@@ -449,14 +519,20 @@
           "default": false
         }
       },
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "description": "A single model in provider inventory."
     },
     "ProviderCatalogListRequest": {
       "type": "object",
       "properties": {
         "format": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "description": "List custom-provider catalog entries. Omit `format` to list all formats.",
@@ -473,7 +549,9 @@
           }
         }
       },
-      "required": ["providers"],
+      "required": [
+        "providers"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/catalog/list"
     },
@@ -529,7 +607,9 @@
           }
         }
       },
-      "required": ["providers"],
+      "required": [
+        "providers"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/setup/catalog/list"
     },
@@ -552,7 +632,10 @@
           "$ref": "#/$defs/ProviderSetupMethodDto"
         },
         "nativeConnectQuery": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "fields": {
           "type": "array",
@@ -562,10 +645,16 @@
           "default": []
         },
         "binaryName": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docUrl": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "group": {
           "$ref": "#/$defs/ProviderSetupGroupDto"
@@ -633,17 +722,31 @@
           "type": "boolean"
         },
         "placeholder": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "defaultValue": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["key", "label", "secret", "required"]
+      "required": [
+        "key",
+        "label",
+        "secret",
+        "required"
+      ]
     },
     "ProviderSetupGroupDto": {
       "type": "string",
-      "enum": ["default", "additional"]
+      "enum": [
+        "default",
+        "additional"
+      ]
     },
     "ProviderCatalogTemplateRequest": {
       "type": "object",
@@ -652,7 +755,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Return the editable template for one catalog provider.",
       "x-side": "agent",
       "x-method": "_goose/providers/catalog/template"
@@ -664,7 +769,9 @@
           "$ref": "#/$defs/ProviderTemplateDto"
         }
       },
-      "required": ["template"],
+      "required": [
+        "template"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/catalog/template"
     },
@@ -730,7 +837,13 @@
           "type": "boolean"
         }
       },
-      "required": ["id", "name", "contextLimit", "capabilities", "deprecated"]
+      "required": [
+        "id",
+        "name",
+        "contextLimit",
+        "capabilities",
+        "deprecated"
+      ]
     },
     "ProviderTemplateCapabilitiesDto": {
       "type": "object",
@@ -748,7 +861,12 @@
           "type": "boolean"
         }
       },
-      "required": ["toolCall", "reasoning", "attachment", "temperature"]
+      "required": [
+        "toolCall",
+        "reasoning",
+        "attachment",
+        "temperature"
+      ]
     },
     "CustomProviderCreateRequest": {
       "type": "object",
@@ -763,7 +881,10 @@
           "type": "string"
         },
         "apiKey": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "models": {
           "type": "array",
@@ -773,7 +894,10 @@
           "default": []
         },
         "supportsStreaming": {
-          "type": ["boolean", "null"]
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "headers": {
           "type": "object",
@@ -786,13 +910,24 @@
           "type": "boolean"
         },
         "catalogProviderId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "basePath": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["engine", "displayName", "apiUrl", "requiresAuth"],
+      "required": [
+        "engine",
+        "displayName",
+        "apiUrl",
+        "requiresAuth"
+      ],
       "description": "Create a custom provider backed by Goose's declarative provider store.",
       "x-side": "agent",
       "x-method": "_goose/providers/custom/create"
@@ -810,7 +945,11 @@
           "$ref": "#/$defs/RefreshProviderInventoryResponse"
         }
       },
-      "required": ["providerId", "status", "refresh"],
+      "required": [
+        "providerId",
+        "status",
+        "refresh"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/custom/create"
     },
@@ -824,7 +963,10 @@
           "type": "boolean"
         }
       },
-      "required": ["providerId", "isConfigured"]
+      "required": [
+        "providerId",
+        "isConfigured"
+      ]
     },
     "RefreshProviderInventoryResponse": {
       "type": "object",
@@ -845,7 +987,9 @@
           "default": []
         }
       },
-      "required": ["started"],
+      "required": [
+        "started"
+      ],
       "description": "Refresh acknowledgement.",
       "x-side": "agent",
       "x-method": "_goose/providers/inventory/refresh"
@@ -860,7 +1004,10 @@
           "$ref": "#/$defs/RefreshProviderInventorySkipReasonDto"
         }
       },
-      "required": ["providerId", "reason"]
+      "required": [
+        "providerId",
+        "reason"
+      ]
     },
     "RefreshProviderInventorySkipReasonDto": {
       "type": "string",
@@ -878,7 +1025,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Read a declarative provider config. Custom configs are editable; bundled configs are read-only.",
       "x-side": "agent",
       "x-method": "_goose/providers/custom/read"
@@ -896,7 +1045,11 @@
           "$ref": "#/$defs/ProviderConfigStatusDto"
         }
       },
-      "required": ["provider", "editable", "status"],
+      "required": [
+        "provider",
+        "editable",
+        "status"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/custom/read"
     },
@@ -923,7 +1076,10 @@
           "default": []
         },
         "supportsStreaming": {
-          "type": ["boolean", "null"]
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "headers": {
           "type": "object",
@@ -936,13 +1092,22 @@
           "type": "boolean"
         },
         "catalogProviderId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "basePath": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "apiKeyEnv": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "apiKeySet": {
           "type": "boolean"
@@ -973,7 +1138,10 @@
           "type": "string"
         },
         "apiKey": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "models": {
           "type": "array",
@@ -983,7 +1151,10 @@
           "default": []
         },
         "supportsStreaming": {
-          "type": ["boolean", "null"]
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "headers": {
           "type": "object",
@@ -996,10 +1167,16 @@
           "type": "boolean"
         },
         "catalogProviderId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "basePath": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1026,7 +1203,11 @@
           "$ref": "#/$defs/RefreshProviderInventoryResponse"
         }
       },
-      "required": ["providerId", "status", "refresh"],
+      "required": [
+        "providerId",
+        "status",
+        "refresh"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/custom/update"
     },
@@ -1037,7 +1218,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Delete a custom provider from Goose's declarative provider store.",
       "x-side": "agent",
       "x-method": "_goose/providers/custom/delete"
@@ -1052,7 +1235,10 @@
           "$ref": "#/$defs/RefreshProviderInventoryResponse"
         }
       },
-      "required": ["providerId", "refresh"],
+      "required": [
+        "providerId",
+        "refresh"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/custom/delete"
     },
@@ -1079,7 +1265,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Read saved configuration field values for one provider.",
       "x-side": "agent",
       "x-method": "_goose/providers/config/read"
@@ -1094,7 +1282,9 @@
           }
         }
       },
-      "required": ["fields"],
+      "required": [
+        "fields"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/config/read"
     },
@@ -1105,7 +1295,10 @@
           "type": "string"
         },
         "value": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "default": null
         },
         "isSet": {
@@ -1118,7 +1311,12 @@
           "type": "boolean"
         }
       },
-      "required": ["key", "isSet", "isSecret", "required"]
+      "required": [
+        "key",
+        "isSet",
+        "isSecret",
+        "required"
+      ]
     },
     "ProviderConfigStatusRequest": {
       "type": "object",
@@ -1145,7 +1343,9 @@
           }
         }
       },
-      "required": ["statuses"],
+      "required": [
+        "statuses"
+      ],
       "x-side": "agent",
       "x-method": "_goose/providers/config/status"
     },
@@ -1162,7 +1362,10 @@
           }
         }
       },
-      "required": ["providerId", "fields"],
+      "required": [
+        "providerId",
+        "fields"
+      ],
       "description": "Save provider configuration fields and start an inventory refresh when supported.",
       "x-side": "agent",
       "x-method": "_goose/providers/config/save"
@@ -1177,7 +1380,10 @@
           "type": "string"
         }
       },
-      "required": ["key", "value"]
+      "required": [
+        "key",
+        "value"
+      ]
     },
     "ProviderConfigChangeResponse": {
       "type": "object",
@@ -1189,7 +1395,10 @@
           "$ref": "#/$defs/RefreshProviderInventoryResponse"
         }
       },
-      "required": ["status", "refresh"],
+      "required": [
+        "status",
+        "refresh"
+      ],
       "x-side": "agent"
     },
     "ProviderConfigDeleteRequest": {
@@ -1199,7 +1408,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Delete provider configuration fields and start an inventory refresh when supported.",
       "x-side": "agent",
       "x-method": "_goose/providers/config/delete"
@@ -1211,7 +1422,9 @@
           "type": "string"
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Run a provider-owned native authentication flow and start an inventory refresh when supported.",
       "x-side": "agent",
       "x-method": "_goose/providers/config/authenticate"
@@ -1250,7 +1463,9 @@
           }
         }
       },
-      "required": ["values"],
+      "required": [
+        "values"
+      ],
       "x-side": "agent",
       "x-method": "_goose/preferences/read"
     },
@@ -1264,7 +1479,9 @@
           "default": null
         }
       },
-      "required": ["key"]
+      "required": [
+        "key"
+      ]
     },
     "PreferencesSaveRequest": {
       "type": "object",
@@ -1306,10 +1523,16 @@
       "type": "object",
       "properties": {
         "providerId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "modelId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "x-side": "agent"
@@ -1321,10 +1544,15 @@
           "type": "string"
         },
         "modelId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["providerId"],
+      "required": [
+        "providerId"
+      ],
       "description": "Save Goose default provider and model configuration.",
       "x-side": "agent",
       "x-method": "_goose/defaults/save"
@@ -1347,7 +1575,10 @@
     },
     "OnboardingImportSourceKind": {
       "type": "string",
-      "enum": ["goose_config", "claude_desktop"],
+      "enum": [
+        "goose_config",
+        "claude_desktop"
+      ],
       "description": "Sources that onboarding knows how to discover and import."
     },
     "OnboardingImportScanResponse": {
@@ -1360,7 +1591,9 @@
           }
         }
       },
-      "required": ["candidates"],
+      "required": [
+        "candidates"
+      ],
       "x-side": "agent",
       "x-method": "_goose/onboarding/import/scan"
     },
@@ -1390,7 +1623,13 @@
           "default": []
         }
       },
-      "required": ["id", "sourceKind", "displayName", "path", "counts"]
+      "required": [
+        "id",
+        "sourceKind",
+        "displayName",
+        "path",
+        "counts"
+      ]
     },
     "OnboardingImportCounts": {
       "type": "object",
@@ -1475,7 +1714,10 @@
           ]
         }
       },
-      "required": ["imported", "skipped"],
+      "required": [
+        "imported",
+        "skipped"
+      ],
       "x-side": "agent",
       "x-method": "_goose/onboarding/import/apply"
     },
@@ -1486,7 +1728,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Export a session as a JSON string.",
       "x-side": "agent",
       "x-method": "_goose/session/export"
@@ -1498,7 +1742,9 @@
           "type": "string"
         }
       },
-      "required": ["data"],
+      "required": [
+        "data"
+      ],
       "description": "Export session response — raw JSON of the goose session with `conversation`.",
       "x-side": "agent",
       "x-method": "_goose/session/export"
@@ -1510,7 +1756,9 @@
           "type": "string"
         }
       },
-      "required": ["data"],
+      "required": [
+        "data"
+      ],
       "description": "Import a session from a JSON string.",
       "x-side": "agent",
       "x-method": "_goose/session/import"
@@ -1522,17 +1770,26 @@
           "type": "string"
         },
         "title": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "updatedAt": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "messageCount": {
           "type": "integer",
           "minimum": 0
         }
       },
-      "required": ["sessionId", "messageCount"],
+      "required": [
+        "sessionId",
+        "messageCount"
+      ],
       "description": "Import session response — metadata about the newly created session.",
       "x-side": "agent",
       "x-method": "_goose/session/import"
@@ -1544,10 +1801,15 @@
           "type": "string"
         },
         "projectId": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Update the project association for a session.",
       "x-side": "agent",
       "x-method": "_goose/session/update_project"
@@ -1562,7 +1824,10 @@
           "type": "string"
         }
       },
-      "required": ["sessionId", "title"],
+      "required": [
+        "sessionId",
+        "title"
+      ],
       "description": "Rename a session.",
       "x-side": "agent",
       "x-method": "_goose/session/rename"
@@ -1574,7 +1839,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Archive a session (soft delete).",
       "x-side": "agent",
       "x-method": "_goose/session/archive"
@@ -1586,7 +1853,9 @@
           "type": "string"
         }
       },
-      "required": ["sessionId"],
+      "required": [
+        "sessionId"
+      ],
       "description": "Unarchive a previously archived session.",
       "x-side": "agent",
       "x-method": "_goose/session/unarchive"
@@ -1606,18 +1875,21 @@
         "content": {
           "type": "string"
         },
-        "metadata": {
-          "description": "Source-type-specific structured metadata. For agents this can include\noptional provider/model/avatar fields written to frontmatter."
-        },
         "global": {
           "type": "boolean"
         },
         "projectDir": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Absolute path to the project root. Required when `global` is false."
         },
         "projectId": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Project source ID. When set with `global: false`, the backend resolves\nthe project's first working directory automatically. Takes precedence\nover `project_dir`."
         },
         "properties": {
@@ -1626,7 +1898,13 @@
           "description": "Arbitrary key/value metadata."
         }
       },
-      "required": ["type", "name", "description", "content", "global"],
+      "required": [
+        "type",
+        "name",
+        "description",
+        "content",
+        "global"
+      ],
       "description": "Create a new source in an explicit target scope (global or project-scoped).",
       "x-side": "agent",
       "x-method": "_goose/sources/create"
@@ -1650,7 +1928,9 @@
           "$ref": "#/$defs/SourceEntry"
         }
       },
-      "required": ["source"],
+      "required": [
+        "source"
+      ],
       "x-side": "agent",
       "x-method": "_goose/sources/create"
     },
@@ -1693,12 +1973,16 @@
           "type": "object",
           "additionalProperties": {},
           "description": "Arbitrary key/value pairs for type-specific metadata (e.g. icon, color,\npreferredProvider for projects). Stored in the frontmatter."
-        },
-        "metadata": {
-          "description": "Source-type-specific structured metadata. For agents this includes\noptional provider/model/avatar fields parsed from frontmatter."
         }
       },
-      "required": ["type", "name", "description", "content", "path", "global"],
+      "required": [
+        "type",
+        "name",
+        "description",
+        "content",
+        "path",
+        "global"
+      ],
       "description": "A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific."
     },
     "ListSourcesRequest": {
@@ -1715,7 +1999,10 @@
           ]
         },
         "projectDir": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "includeProjectSources": {
           "type": "boolean",
@@ -1737,7 +2024,9 @@
           }
         }
       },
-      "required": ["sources"],
+      "required": [
+        "sources"
+      ],
       "x-side": "agent",
       "x-method": "_goose/sources/list"
     },
@@ -1759,16 +2048,22 @@
         "content": {
           "type": "string"
         },
-        "metadata": {
-          "description": "Source-type-specific structured metadata. For agents this can include\noptional provider/model/avatar fields written to frontmatter."
-        },
         "properties": {
-          "type": ["object", "null"],
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": {},
           "description": "When `Some`, replaces all stored properties on the source. When\n`None` (or omitted), the source's existing properties are\npreserved. Callers that don't model the full property bag (e.g.\nthe skills editor, which only edits name/description/content)\nshould omit this so per-skill metadata isn't silently erased."
         }
       },
-      "required": ["type", "path", "name", "description", "content"],
+      "required": [
+        "type",
+        "path",
+        "name",
+        "description",
+        "content"
+      ],
       "description": "Update an existing source's name, description, and content by absolute path.",
       "x-side": "agent",
       "x-method": "_goose/sources/update"
@@ -1780,7 +2075,9 @@
           "$ref": "#/$defs/SourceEntry"
         }
       },
-      "required": ["source"],
+      "required": [
+        "source"
+      ],
       "x-side": "agent",
       "x-method": "_goose/sources/update"
     },
@@ -1794,7 +2091,10 @@
           "type": "string"
         }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "description": "Delete a source and its on-disk directory by absolute path.",
       "x-side": "agent",
       "x-method": "_goose/sources/delete"
@@ -1809,7 +2109,10 @@
           "type": "string"
         }
       },
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "description": "Export a source at an absolute path as a portable JSON payload.",
       "x-side": "agent",
       "x-method": "_goose/sources/export"
@@ -1824,7 +2127,10 @@
           "type": "string"
         }
       },
-      "required": ["json", "filename"],
+      "required": [
+        "json",
+        "filename"
+      ],
       "x-side": "agent",
       "x-method": "_goose/sources/export"
     },
@@ -1838,10 +2144,16 @@
           "type": "boolean"
         },
         "projectDir": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["data", "global"],
+      "required": [
+        "data",
+        "global"
+      ],
       "description": "Import a source from a JSON export payload produced by `_goose/sources/export`.\nThe imported source is written into the explicit target scope; on name\ncollisions a `-imported` suffix is appended.",
       "x-side": "agent",
       "x-method": "_goose/sources/import"
@@ -1856,7 +2168,9 @@
           }
         }
       },
-      "required": ["sources"],
+      "required": [
+        "sources"
+      ],
       "x-side": "agent",
       "x-method": "_goose/sources/import"
     },
@@ -1876,7 +2190,11 @@
           "description": "Provider to use: \"openai\", \"groq\", \"elevenlabs\", or \"local\""
         }
       },
-      "required": ["audio", "mimeType", "provider"],
+      "required": [
+        "audio",
+        "mimeType",
+        "provider"
+      ],
       "description": "Transcribe audio via a dictation provider.",
       "x-side": "agent",
       "x-method": "_goose/dictation/transcribe"
@@ -1888,7 +2206,9 @@
           "type": "string"
         }
       },
-      "required": ["text"],
+      "required": [
+        "text"
+      ],
       "description": "Transcription result.",
       "x-side": "agent",
       "x-method": "_goose/dictation/transcribe"
@@ -1909,7 +2229,9 @@
           }
         }
       },
-      "required": ["providers"],
+      "required": [
+        "providers"
+      ],
       "description": "Dictation config response — map of provider name to status.",
       "x-side": "agent",
       "x-method": "_goose/dictation/config"
@@ -1921,7 +2243,10 @@
           "type": "boolean"
         },
         "host": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "description": {
           "type": "string"
@@ -1930,19 +2255,34 @@
           "type": "boolean"
         },
         "settingsPath": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "configKey": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "modelConfigKey": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "defaultModel": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "selectedModel": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "availableModels": {
           "type": "array",
@@ -1952,7 +2292,11 @@
           "default": []
         }
       },
-      "required": ["configured", "description", "usesProviderConfig"],
+      "required": [
+        "configured",
+        "description",
+        "usesProviderConfig"
+      ],
       "description": "Per-provider configuration status."
     },
     "DictationModelOption": {
@@ -1968,7 +2312,11 @@
           "type": "string"
         }
       },
-      "required": ["id", "label", "description"]
+      "required": [
+        "id",
+        "label",
+        "description"
+      ]
     },
     "DictationSecretSaveRequest": {
       "type": "object",
@@ -1980,7 +2328,10 @@
           "type": "string"
         }
       },
-      "required": ["provider", "value"],
+      "required": [
+        "provider",
+        "value"
+      ],
       "description": "Set a dictation provider secret value.",
       "x-side": "agent",
       "x-method": "_goose/dictation/secret/save"
@@ -1992,7 +2343,9 @@
           "type": "string"
         }
       },
-      "required": ["provider"],
+      "required": [
+        "provider"
+      ],
       "description": "Remove a dictation provider secret value.",
       "x-side": "agent",
       "x-method": "_goose/dictation/secret/delete"
@@ -2013,7 +2366,9 @@
           }
         }
       },
-      "required": ["models"],
+      "required": [
+        "models"
+      ],
       "x-side": "agent",
       "x-method": "_goose/dictation/models/list"
     },
@@ -2056,7 +2411,9 @@
           "type": "string"
         }
       },
-      "required": ["modelId"],
+      "required": [
+        "modelId"
+      ],
       "description": "Kick off a background download of a local Whisper model.",
       "x-side": "agent",
       "x-method": "_goose/dictation/models/download"
@@ -2068,7 +2425,9 @@
           "type": "string"
         }
       },
-      "required": ["modelId"],
+      "required": [
+        "modelId"
+      ],
       "description": "Poll the progress of an in-flight download.",
       "x-side": "agent",
       "x-method": "_goose/dictation/models/download/progress"
@@ -2111,10 +2470,18 @@
           "description": "serde lowercase of DownloadStatus: \"downloading\" | \"completed\" | \"failed\" | \"cancelled\""
         },
         "error": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": ["bytesDownloaded", "totalBytes", "progressPercent", "status"]
+      "required": [
+        "bytesDownloaded",
+        "totalBytes",
+        "progressPercent",
+        "status"
+      ]
     },
     "DictationModelCancelRequest": {
       "type": "object",
@@ -2123,7 +2490,9 @@
           "type": "string"
         }
       },
-      "required": ["modelId"],
+      "required": [
+        "modelId"
+      ],
       "description": "Cancel an in-flight download.",
       "x-side": "agent",
       "x-method": "_goose/dictation/models/cancel"
@@ -2135,7 +2504,9 @@
           "type": "string"
         }
       },
-      "required": ["modelId"],
+      "required": [
+        "modelId"
+      ],
       "description": "Delete a downloaded local Whisper model from disk.",
       "x-side": "agent",
       "x-method": "_goose/dictation/models/delete"
@@ -2150,7 +2521,10 @@
           "type": "string"
         }
       },
-      "required": ["provider", "modelId"],
+      "required": [
+        "provider",
+        "modelId"
+      ],
       "description": "Persist the user's model selection for a given provider.",
       "x-side": "agent",
       "x-method": "_goose/dictation/model/select"
@@ -2666,12 +3040,18 @@
             },
             {
               "description": "Untyped params",
-              "type": ["object", "null"]
+              "type": [
+                "object",
+                "null"
+              ]
             }
           ]
         }
       },
-      "required": ["id", "method"],
+      "required": [
+        "id",
+        "method"
+      ],
       "type": "object",
       "x-docs-ignore": true
     },
@@ -2958,7 +3338,9 @@
               ]
             }
           },
-          "required": ["id"],
+          "required": [
+            "id"
+          ],
           "title": "Success",
           "type": "object"
         },
@@ -2975,13 +3357,19 @@
                 },
                 "data": {}
               },
-              "required": ["code", "message"]
+              "required": [
+                "code",
+                "message"
+              ]
             },
             "id": {
               "type": "string"
             }
           },
-          "required": ["id", "error"],
+          "required": [
+            "id",
+            "error"
+          ],
           "title": "Error",
           "type": "object"
         }

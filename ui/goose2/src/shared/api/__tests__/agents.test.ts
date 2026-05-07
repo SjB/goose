@@ -42,7 +42,7 @@ const source = {
   path: "/Users/test/.agents/agents/scout.md",
   global: true,
   writable: true,
-  metadata: {
+  properties: {
     provider: "goose",
     model: "claude-sonnet-4",
     avatar: "file:///Users/test/.goose/avatars/agents/scout.png",
@@ -64,7 +64,7 @@ describe("agents API", () => {
       {
         id: source.path,
         displayName: "Scout",
-        avatar: { type: "url", value: source.metadata.avatar },
+        avatar: { type: "url", value: source.properties.avatar },
         systemPrompt: "Research carefully.",
         provider: "goose",
         model: "claude-sonnet-4",
@@ -82,7 +82,7 @@ describe("agents API", () => {
 
     const result = await createPersona({
       displayName: "Scout",
-      avatar: { type: "url", value: source.metadata.avatar },
+      avatar: { type: "url", value: source.properties.avatar },
       systemPrompt: "Research carefully.",
       provider: "goose",
       model: "claude-sonnet-4",
@@ -93,10 +93,10 @@ describe("agents API", () => {
       name: "Scout",
       description: "Agent",
       content: "Research carefully.",
-      metadata: {
+      properties: {
         provider: "goose",
         model: "claude-sonnet-4",
-        avatar: source.metadata.avatar,
+        avatar: source.properties.avatar,
       },
       global: true,
     });
@@ -119,10 +119,10 @@ describe("agents API", () => {
       name: "Scout 2",
       description: "Agent",
       content: "Research carefully.",
-      metadata: {
+      properties: {
         provider: "goose",
         model: "claude-sonnet-4",
-        avatar: source.metadata.avatar,
+        avatar: source.properties.avatar,
       },
     });
     expect(result.displayName).toBe("Scout 2");

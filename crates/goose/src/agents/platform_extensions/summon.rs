@@ -130,7 +130,6 @@ fn parse_agent_content(content: &str, path: &Path) -> Option<SourceEntry> {
         writable: true,
         supporting_files: Vec::new(),
         properties: std::collections::HashMap::new(),
-        metadata: None,
     })
 }
 
@@ -179,7 +178,6 @@ fn scan_recipes_from_dir(
                     writable: true,
                     supporting_files: Vec::new(),
                     properties: std::collections::HashMap::new(),
-                    metadata: None,
                 });
             }
             Err(e) => {
@@ -609,7 +607,6 @@ impl SummonClient {
                 writable: true,
                 supporting_files: Vec::new(),
                 properties: std::collections::HashMap::new(),
-                metadata: None,
             });
         }
     }

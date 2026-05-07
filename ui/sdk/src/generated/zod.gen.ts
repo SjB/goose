@@ -767,7 +767,6 @@ export const zCreateSourceRequest = z.object({
     name: z.string(),
     description: z.string(),
     content: z.string(),
-    metadata: z.unknown().optional(),
     global: z.boolean(),
     projectDir: z.union([
         z.string(),
@@ -794,8 +793,7 @@ export const zSourceEntry = z.object({
     global: z.boolean(),
     writable: z.boolean().optional().default(false),
     supportingFiles: z.array(z.string()).optional(),
-    properties: z.record(z.unknown()).optional(),
-    metadata: z.unknown().optional()
+    properties: z.record(z.unknown()).optional()
 });
 
 export const zCreateSourceResponse = z.object({
@@ -835,7 +833,6 @@ export const zUpdateSourceRequest = z.object({
     name: z.string(),
     description: z.string(),
     content: z.string(),
-    metadata: z.unknown().optional(),
     properties: z.union([
         z.record(z.unknown()),
         z.null()

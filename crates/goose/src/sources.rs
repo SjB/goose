@@ -14,7 +14,7 @@ use base64::Engine;
 use fs_err as fs;
 use goose_sdk::custom_requests::{SourceEntry, SourceType};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::warn;
@@ -190,7 +190,6 @@ fn project_entry_from_file(file: &Path) -> Option<SourceEntry> {
         writable: true,
         supporting_files: Vec::new(),
         properties,
-        metadata: None,
     })
 }
 
@@ -287,7 +286,6 @@ fn skill_source_entry(
         writable: true,
         supporting_files: Vec::new(),
         properties,
-        metadata: None,
     }
 }
 
@@ -296,7 +294,6 @@ fn builtin_skill_entry(mut source: SourceEntry) -> SourceEntry {
     source.path = format!("builtin://skills/{}", source.name);
     source.global = true;
     source.supporting_files.clear();
-    source.metadata = None;
     source
 }
 
@@ -306,7 +303,7 @@ fn agent_source_entry_from_parts(
     content: &str,
     path: &Path,
     global: bool,
-    metadata: Option<Value>,
+    properties: HashMap<String, serde_json::Value>,
     writable: bool,
 ) -> SourceEntry {
     SourceEntry {
@@ -318,8 +315,7 @@ fn agent_source_entry_from_parts(
         global,
         writable,
         supporting_files: Vec::new(),
-        properties: HashMap::new(),
-        metadata,
+        properties,
     }
 }
 
@@ -406,14 +402,12 @@ fn slugify_agent_name(name: &str) -> String {
     }
 }
 
-fn agent_metadata_from_value(
-    metadata: Option<Value>,
+fn agent_property_fields(
+    properties: &HashMap<String, serde_json::Value>,
 ) -> (Option<String>, Option<String>, Option<String>) {
-    let Some(Value::Object(map)) = metadata else {
-        return (None, None, None);
-    };
     let read_string = |key: &str| {
-        map.get(key)
+        properties
+            .get(key)
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|value| !value.is_empty())
@@ -511,31 +505,31 @@ fn persist_file_url_avatar(file_url: &str) -> Result<String, Error> {
     Ok(format!("file://{}", path.to_string_lossy()))
 }
 
-fn agent_metadata_json(
+fn agent_properties(
     provider: Option<String>,
     model: Option<String>,
     avatar: Option<String>,
-) -> Option<Value> {
-    let mut map = Map::new();
+) -> HashMap<String, serde_json::Value> {
+    let mut properties = HashMap::new();
     if let Some(provider) = provider.filter(|value| !value.trim().is_empty()) {
-        map.insert("provider".to_string(), Value::String(provider));
+        properties.insert("provider".to_string(), Value::String(provider));
     }
     if let Some(model) = model.filter(|value| !value.trim().is_empty()) {
-        map.insert("model".to_string(), Value::String(model));
+        properties.insert("model".to_string(), Value::String(model));
     }
     if let Some(avatar) = avatar.filter(|value| !value.trim().is_empty()) {
-        map.insert("avatar".to_string(), Value::String(avatar));
+        properties.insert("avatar".to_string(), Value::String(avatar));
     }
-    (!map.is_empty()).then_some(Value::Object(map))
+    properties
 }
 
 fn build_agent_md(
     name: &str,
     description: &str,
     content: &str,
-    metadata: Option<Value>,
+    properties: &HashMap<String, serde_json::Value>,
 ) -> Result<String, Error> {
-    let (provider, model, avatar) = agent_metadata_from_value(metadata);
+    let (provider, model, avatar) = agent_property_fields(properties);
     let frontmatter = AgentFrontmatter {
         name: name.to_string(),
         description: description.to_string(),
@@ -570,7 +564,7 @@ fn agent_source_entry(path: &Path, global: bool, writable: bool) -> Result<Sourc
         &content,
         path,
         global,
-        agent_metadata_json(frontmatter.provider, frontmatter.model, frontmatter.avatar),
+        agent_properties(frontmatter.provider, frontmatter.model, frontmatter.avatar),
         writable,
     ))
 }
@@ -731,7 +725,7 @@ fn create_agent_source(
     name: &str,
     description: &str,
     content: &str,
-    metadata: Option<Value>,
+    properties: HashMap<String, serde_json::Value>,
     global: bool,
     project_dir: Option<&str>,
 ) -> Result<SourceEntry, Error> {
@@ -753,7 +747,7 @@ fn create_agent_source(
     fs::create_dir_all(&base).map_err(|e| {
         Error::internal_error().data(format!("Failed to create source directory: {e}"))
     })?;
-    let md = build_agent_md(name, description, content, metadata)?;
+    let md = build_agent_md(name, description, content, &properties)?;
     fs::write(&file_path, md)
         .map_err(|e| Error::internal_error().data(format!("Failed to write agent file: {e}")))?;
 
@@ -765,14 +759,14 @@ fn update_agent_source(
     name: &str,
     description: &str,
     content: &str,
-    metadata: Option<Value>,
+    properties: HashMap<String, serde_json::Value>,
     additional_roots: &[SourceRoot],
 ) -> Result<SourceEntry, Error> {
     validate_agent_name(name)?;
     let file_path = resolve_agent_file_with_roots(path, additional_roots)?;
     reject_read_only_agent_file(&file_path, additional_roots)?;
     let global = is_global_agent_file(&file_path);
-    let md = build_agent_md(name, description, content, metadata)?;
+    let md = build_agent_md(name, description, content, &properties)?;
     fs::write(&file_path, md)
         .map_err(|e| Error::internal_error().data(format!("Failed to write agent file: {e}")))?;
 
@@ -782,7 +776,6 @@ fn update_agent_source(
 // --- Public CRUD ---
 
 pub struct CreateSourceOptions<'a> {
-    pub metadata: Option<Value>,
     pub global: bool,
     pub project_dir: Option<&'a str>,
     pub properties: HashMap<String, serde_json::Value>,
@@ -801,7 +794,7 @@ pub fn create_source(
             name,
             description,
             content,
-            options.metadata,
+            options.properties,
             options.global,
             options.project_dir,
         );
@@ -870,7 +863,6 @@ pub fn update_source(
     name: &str,
     description: &str,
     content: &str,
-    metadata: Option<Value>,
     properties: Option<HashMap<String, serde_json::Value>>,
 ) -> Result<SourceEntry, Error> {
     update_source_with_roots(
@@ -880,7 +872,6 @@ pub fn update_source(
         description,
         content,
         UpdateSourceOptions {
-            metadata,
             properties,
             additional_roots: &[],
         },
@@ -888,7 +879,6 @@ pub fn update_source(
 }
 
 pub struct UpdateSourceOptions<'a> {
-    pub metadata: Option<Value>,
     pub properties: Option<HashMap<String, serde_json::Value>>,
     pub additional_roots: &'a [SourceRoot],
 }
@@ -908,7 +898,7 @@ pub fn update_source_with_roots(
             name,
             description,
             content,
-            options.metadata,
+            options.properties.unwrap_or_default(),
             options.additional_roots,
         );
     }
@@ -1187,7 +1177,6 @@ pub fn export_source_with_roots(
                 "name": source.name,
                 "description": source.description,
                 "content": source.content,
-                "metadata": source.metadata,
             });
             let json = serde_json::to_string_pretty(&export).map_err(|e| {
                 Error::internal_error().data(format!("Failed to serialize source: {e}"))
@@ -1309,9 +1298,22 @@ pub fn import_sources(
     }
 
     if source_type == SourceType::Agent {
-        let metadata = value.get("metadata").cloned();
-        return create_agent_source(&name, &description, &content, metadata, global, project_dir)
-            .map(|source| vec![source]);
+        if let Some(legacy_metadata) = value.get("metadata").and_then(|v| v.as_object()) {
+            for (key, value) in legacy_metadata {
+                properties
+                    .entry(key.clone())
+                    .or_insert_with(|| value.clone());
+            }
+        }
+        return create_agent_source(
+            &name,
+            &description,
+            &content,
+            properties,
+            global,
+            project_dir,
+        )
+        .map(|source| vec![source]);
     }
 
     match source_type {
@@ -1333,7 +1335,6 @@ pub fn import_sources(
                 &description,
                 &content,
                 CreateSourceOptions {
-                    metadata: None,
                     global,
                     project_dir,
                     properties,
@@ -1358,7 +1359,6 @@ pub fn import_sources(
                 &description,
                 &content,
                 CreateSourceOptions {
-                    metadata: None,
                     global: true,
                     project_dir: None,
                     properties,
@@ -1421,7 +1421,6 @@ mod tests {
             "Built in",
             "Updated",
             UpdateSourceOptions {
-                metadata: None,
                 properties: None,
                 additional_roots: &[SourceRoot::read_only(root.canonicalize().unwrap())],
             },
@@ -1449,7 +1448,6 @@ mod tests {
             "does the thing",
             "step one\nstep two",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1470,7 +1468,6 @@ mod tests {
             "my-skill",
             "now does a different thing",
             "step three",
-            None,
             Some(HashMap::new()),
         )
         .unwrap();
@@ -1492,7 +1489,6 @@ mod tests {
             "d",
             "c",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1505,7 +1501,6 @@ mod tests {
             "d",
             "c",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1523,7 +1518,6 @@ mod tests {
             "d",
             "c",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: None,
                 properties: HashMap::new(),
@@ -1547,7 +1541,6 @@ mod tests {
             "describes itself",
             "body goes here",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project_a.to_str().unwrap()),
                 properties: HashMap::new(),
@@ -1624,7 +1617,6 @@ mod tests {
             "portable",
             "updated description",
             "updated body",
-            None,
             Some(HashMap::new()),
         )
         .unwrap();
@@ -1649,7 +1641,6 @@ mod tests {
             "d",
             "c",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1683,7 +1674,6 @@ mod tests {
             "no-such-skill",
             "d",
             "c",
-            None,
             Some(HashMap::new()),
         )
         .unwrap_err();
@@ -1780,7 +1770,6 @@ mod tests {
             "d",
             "c",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1795,22 +1784,13 @@ mod tests {
             "x",
             "d",
             "c",
-            None,
             Some(HashMap::new()),
         )
         .unwrap_err();
         assert!(format!("{:?}", err).contains("not supported"));
 
-        let err = update_source(
-            SourceType::Recipe,
-            "x",
-            "x",
-            "d",
-            "c",
-            None,
-            Some(HashMap::new()),
-        )
-        .unwrap_err();
+        let err = update_source(SourceType::Recipe, "x", "x", "d", "c", Some(HashMap::new()))
+            .unwrap_err();
         assert!(format!("{:?}", err).contains("not supported"));
 
         let err = delete_source(SourceType::BuiltinSkill, "builtin://skills/x").unwrap_err();
@@ -1856,7 +1836,6 @@ mod tests {
             "orig",
             "body",
             CreateSourceOptions {
-                metadata: None,
                 global: false,
                 project_dir: Some(project),
                 properties: HashMap::new(),
@@ -1871,7 +1850,6 @@ mod tests {
             "my-dir",
             "new description",
             "new body",
-            None,
             Some(HashMap::new()),
         )
         .unwrap();
@@ -1967,7 +1945,6 @@ mod tests {
             "escaped",
             "new description",
             "new content",
-            None,
             Some(HashMap::new()),
         )
         .unwrap_err();

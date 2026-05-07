@@ -21,7 +21,7 @@ export interface ModelInfo {
   supportsThinking: boolean;
 }
 
-// Avatar type — remote, data, and file URLs are stored directly in source metadata.
+// Avatar type — remote, data, and file URLs are stored directly in source properties.
 export type Avatar = { type: "url"; value: string };
 
 // Persona types (from sprout)

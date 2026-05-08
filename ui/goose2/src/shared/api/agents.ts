@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { SourceEntry } from "@aaif/goose-sdk";
 import { getClient } from "@/shared/api/acpConnection";
 import { bytesToBase64 } from "@/shared/lib/encoding";
@@ -176,11 +175,6 @@ export async function importPersonas(
   fileBytes: number[],
   fileName: string,
 ): Promise<Persona[]> {
-  const lowerName = fileName.toLowerCase();
-  if (!lowerName.endsWith(".agent.md") && !lowerName.endsWith(".persona.md")) {
-    throw new Error("File must have a .agent.md or .persona.md extension");
-  }
-
   const client = await getClient();
   const response = await client.goose.GooseSourcesImport({
     data: bytesToBase64(fileBytes),
@@ -190,15 +184,4 @@ export async function importPersonas(
   });
 
   return response.sources.filter(isAgentSource).map(toPersona);
-}
-
-export interface ImportFileReadResult {
-  fileBytes: number[];
-  fileName: string;
-}
-
-export async function readImportPersonaFile(
-  sourcePath: string,
-): Promise<ImportFileReadResult> {
-  return invoke("read_import_persona_file", { sourcePath });
 }

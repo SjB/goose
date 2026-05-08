@@ -242,8 +242,8 @@ export async function exportSkill(
   };
 }
 
-export async function importSkills(
-  fileBytes: number[],
+async function importSkillsBase64(
+  data: string,
   fileName: string,
 ): Promise<SkillInfo[]> {
   const lowerName = fileName.toLowerCase();
@@ -253,11 +253,25 @@ export async function importSkills(
 
   const client = await getClient();
   const response = await client.goose.GooseSourcesImport({
-    data: bytesToBase64(fileBytes),
+    data,
     filename: fileName,
     type: SKILL_SOURCE_TYPE,
     global: true,
   });
 
   return response.sources.filter(isFilesystemSkillSource).map(toSkillInfo);
+}
+
+export async function importSkills(
+  fileBytes: number[],
+  fileName: string,
+): Promise<SkillInfo[]> {
+  return importSkillsBase64(bytesToBase64(fileBytes), fileName);
+}
+
+export async function importSkillsArchive(
+  data: string,
+  fileName: string,
+): Promise<SkillInfo[]> {
+  return importSkillsBase64(data, fileName);
 }

@@ -7,6 +7,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Duration, Utc};
 use fs_err as fs;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tracing::warn;
@@ -93,10 +94,20 @@ pub fn installed_plugin_skill_dirs() -> Vec<PathBuf> {
         Err(_) => return Vec::new(),
     };
 
+    let mut seen = HashSet::new();
     entries
         .flatten()
-        .map(|entry| entry.path().join("skills"))
-        .filter(|path| path.is_dir())
+        .flat_map(|entry| {
+            let plugin_dir = entry.path();
+            let mut skill_dirs = Vec::new();
+            let default_skills_dir = plugin_dir.join("skills");
+            if default_skills_dir.is_dir() {
+                skill_dirs.push(default_skills_dir);
+            }
+            skill_dirs.extend(formats::open_plugins::installed_skill_dirs(&plugin_dir));
+            skill_dirs
+        })
+        .filter(|path| seen.insert(path.clone()))
         .collect()
 }
 

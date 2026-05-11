@@ -54,6 +54,15 @@ impl Conversation {
                 {
                     last.text.push_str(&new.text);
                 }
+                (
+                    Some(MessageContent::Thinking(ref mut last)),
+                    Some(MessageContent::Thinking(new)),
+                ) if message.content.len() == 1 => {
+                    last.thinking.push_str(&new.thinking);
+                    if !new.signature.is_empty() && new.signature != last.signature {
+                        last.signature = new.signature.clone();
+                    }
+                }
                 (_, _) => {
                     last.content.extend(message.content);
                 }
@@ -1253,5 +1262,78 @@ mod tests {
 
         assert_eq!(fixed_messages[5].as_concat_text(), "Non-vis C");
         assert!(!fixed_messages[5].metadata.agent_visible);
+    }
+
+    #[test]
+    fn test_push_coalesces_thinking_deltas() {
+        use crate::conversation::message::MessageContent;
+
+        let mut conv = Conversation::empty();
+        for fragment in ["I ", "should ", "think ", "about ", "this."] {
+            conv.push(Message::assistant().with_thinking(fragment, "").with_id("turn-1"));
+        }
+
+        assert_eq!(conv.messages().len(), 1);
+        let content = &conv.messages()[0].content;
+        assert_eq!(content.len(), 1);
+        match &content[0] {
+            MessageContent::Thinking(t) => {
+                assert_eq!(t.thinking, "I should think about this.");
+                assert_eq!(t.signature, "");
+            }
+            other => panic!("expected single Thinking block, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_push_thinking_adopts_latest_signature() {
+        use crate::conversation::message::MessageContent;
+
+        let mut conv = Conversation::empty();
+        conv.push(Message::assistant().with_thinking("a", "").with_id("turn-1"));
+        conv.push(Message::assistant().with_thinking("b", "sig1").with_id("turn-1"));
+        conv.push(Message::assistant().with_thinking("c", "").with_id("turn-1"));
+
+        let content = &conv.messages()[0].content;
+        assert_eq!(content.len(), 1);
+        match &content[0] {
+            MessageContent::Thinking(t) => {
+                assert_eq!(t.thinking, "abc");
+                // Non-empty signature wins; later empty signature does not clobber.
+                assert_eq!(t.signature, "sig1");
+            }
+            other => panic!("expected Thinking, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_push_does_not_coalesce_multi_block_thinking_message() {
+        use crate::conversation::message::MessageContent;
+
+        // First push: single Thinking block — establishes the message in the conversation.
+        let mut conv = Conversation::empty();
+        conv.push(Message::assistant().with_thinking("first", "").with_id("turn-1"));
+
+        // Second push has multiple blocks (Thinking + Text). The merge arm requires
+        // `message.content.len() == 1`, so this must NOT coalesce into the existing
+        // thinking block — both new blocks are appended.
+        let mut multi = Message::assistant().with_thinking("second", "");
+        multi = multi.with_text("and now text").with_id("turn-1");
+        conv.push(multi);
+
+        let content = &conv.messages()[0].content;
+        assert_eq!(content.len(), 3);
+        match (&content[0], &content[1], &content[2]) {
+            (
+                MessageContent::Thinking(a),
+                MessageContent::Thinking(b),
+                MessageContent::Text(c),
+            ) => {
+                assert_eq!(a.thinking, "first");
+                assert_eq!(b.thinking, "second");
+                assert_eq!(c.text, "and now text");
+            }
+            other => panic!("unexpected content shape: {:?}", other),
+        }
     }
 }

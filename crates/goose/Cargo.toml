@@ -149,6 +149,7 @@ ahash = "0.8"
 tokio-util = { workspace = true, features = ["compat"] }
 agent-client-protocol-schema = { workspace = true }
 agent-client-protocol = { workspace = true, features = ["unstable"] }
+agent-client-protocol-http = { workspace = true }
 unicode-normalization = "0.1"
 
 # For local Whisper transcription (optional, behind "local-inference" feature)

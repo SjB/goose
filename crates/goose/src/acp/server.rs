@@ -3315,7 +3315,7 @@ pub async fn run(builtins: Vec<String>) -> Result<()> {
     let outgoing = tokio::io::stdout().compat_write();
     let incoming = tokio::io::stdin().compat();
 
-    let server = crate::acp::server_factory::AcpServer::new(
+    let factory = crate::acp::server_factory::AcpAgentFactory::new(
         crate::acp::server_factory::AcpServerFactoryConfig {
             builtins,
             data_dir: Paths::data_dir(),
@@ -3324,7 +3324,7 @@ pub async fn run(builtins: Vec<String>) -> Result<()> {
             additional_source_roots: Vec::new(),
         },
     );
-    let agent = server.create_agent().await?;
+    let agent = Arc::new(factory.create_agent().await?);
     serve(agent, incoming, outgoing).await
 }
 

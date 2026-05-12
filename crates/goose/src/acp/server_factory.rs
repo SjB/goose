@@ -1,9 +1,11 @@
-use crate::acp::server::{AcpProviderFactory, GooseAcpAgent, GooseAcpAgentOptions};
+use crate::acp::server::{
+    AcpProviderFactory, GooseAcpAgent, GooseAcpAgentOptions, GooseAcpHandler,
+};
 use crate::agents::GoosePlatform;
 use crate::source_roots::SourceRoot;
+use agent_client_protocol::{component::DynConnectTo, Agent as SacpAgent, Client};
 use anyhow::Result;
 use std::sync::Arc;
-use tracing::info;
 
 pub struct AcpServerFactoryConfig {
     pub builtins: Vec<String>,
@@ -13,16 +15,19 @@ pub struct AcpServerFactoryConfig {
     pub additional_source_roots: Vec<SourceRoot>,
 }
 
-pub struct AcpServer {
-    config: AcpServerFactoryConfig,
+#[derive(Clone)]
+pub struct AcpAgentFactory {
+    config: Arc<AcpServerFactoryConfig>,
 }
 
-impl AcpServer {
+impl AcpAgentFactory {
     pub fn new(config: AcpServerFactoryConfig) -> Self {
-        Self { config }
+        Self {
+            config: Arc::new(config),
+        }
     }
 
-    pub async fn create_agent(&self) -> Result<Arc<GooseAcpAgent>> {
+    pub async fn create_agent(&self) -> Result<GooseAcpAgent> {
         let config_path = self
             .config
             .config_dir
@@ -41,7 +46,7 @@ impl AcpServer {
                 })
             });
 
-        let agent = GooseAcpAgent::new(GooseAcpAgentOptions {
+        GooseAcpAgent::new(GooseAcpAgentOptions {
             provider_factory,
             builtins: self.config.builtins.clone(),
             data_dir: self.config.data_dir.clone(),
@@ -51,9 +56,24 @@ impl AcpServer {
             goose_platform: self.config.goose_platform.clone(),
             additional_source_roots: self.config.additional_source_roots.clone(),
         })
-        .await?;
-        info!("Created new ACP agent");
+        .await
+    }
 
-        Ok(Arc::new(agent))
+    pub fn into_factory(self) -> impl Fn() -> DynConnectTo<Client> + Send + Sync + Clone + 'static {
+        move || {
+            let factory = self.clone();
+            let agent = tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current()
+                    .block_on(factory.create_agent())
+                    .expect("Failed to create agent")
+            });
+
+            let handler = GooseAcpHandler {
+                agent: Arc::new(agent),
+            };
+
+            let builder = SacpAgent.builder().name("goose-acp").with_handler(handler);
+            DynConnectTo::new(builder)
+        }
     }
 }

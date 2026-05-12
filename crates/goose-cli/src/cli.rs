@@ -1111,11 +1111,10 @@ async fn handle_mcp_command(server: McpCommand) -> Result<()> {
 }
 
 async fn handle_serve_command(host: String, port: u16, builtins: Vec<String>) -> Result<()> {
-    use goose::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
+    use goose::acp::server_factory::{AcpAgentFactory, AcpServerFactoryConfig};
     use goose::acp::transport::create_router;
     use goose::config::paths::Paths;
     use std::net::SocketAddr;
-    use std::sync::Arc;
     use tracing::info;
 
     let builtins = if builtins.is_empty() {
@@ -1136,19 +1135,19 @@ async fn handle_serve_command(host: String, port: u16, builtins: Vec<String>) ->
         })
         .collect();
 
-    let server = Arc::new(AcpServer::new(AcpServerFactoryConfig {
+    let factory = AcpAgentFactory::new(AcpServerFactoryConfig {
         builtins,
         data_dir: Paths::data_dir(),
         config_dir: Paths::config_dir(),
         goose_platform: GoosePlatform::GooseCli,
         additional_source_roots,
-    }));
+    });
     let secret_key = std::env::var(GOOSE_SERVER_SECRET_KEY_ENV)
         .ok()
         .map(|secret| secret.trim().to_string())
         .filter(|secret| !secret.is_empty())
         .unwrap_or_else(generate_serve_secret_key);
-    let router = create_router(server, secret_key);
+    let router = create_router(factory, secret_key);
 
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
     info!("Starting ACP server on {}", addr);

@@ -582,7 +582,11 @@ mod tests {
             }
 
             fn get_model_config(&self) -> ModelConfig {
-                ModelConfig::new("mock-model").unwrap()
+                // Use a small context limit (32K) so tool-pair summarization
+                // is allowed — it is gated to context windows <= 64K.
+                ModelConfig::new("mock-model")
+                    .unwrap()
+                    .with_context_limit(Some(32_000))
             }
 
             fn get_name(&self) -> &str {
@@ -744,7 +748,7 @@ mod tests {
                 agent_reply_pos,
             );
 
-            // Clean up the config override
+            // Clean up config overrides
             Config::global().delete("GOOSE_TOOL_CALL_CUTOFF").unwrap();
 
             Ok(())

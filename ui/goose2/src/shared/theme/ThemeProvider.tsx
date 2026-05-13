@@ -169,15 +169,12 @@ function applyCachedTheme(): CachedThemeState | null {
 }
 
 function applyDensity(density: Density) {
-  const spacingScale: Record<Density, string> = {
-    compact: "0.75",
-    comfortable: "1",
-    spacious: "1.25",
-  };
-  document.documentElement.style.setProperty(
-    "--density-spacing",
-    spacingScale[density],
-  );
+  const root = document.documentElement;
+  if (density === "comfortable") {
+    root.removeAttribute("data-density");
+  } else {
+    root.dataset.density = density;
+  }
 }
 
 function readInitialThemeState(

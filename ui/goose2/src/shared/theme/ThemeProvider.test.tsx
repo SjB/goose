@@ -352,9 +352,7 @@ describe("ThemeProvider", () => {
     expect(
       document.documentElement.style.getPropertyValue("--brand-color"),
     ).toBe("#ef4444");
-    expect(
-      document.documentElement.style.getPropertyValue("--density-spacing"),
-    ).toBe("0.75");
+    expect(document.documentElement.dataset.density).toBe("compact");
   });
 
   it("falls back to the built-in system theme when async theme loading fails", async () => {

@@ -219,6 +219,7 @@ pub struct Agent {
 #[derive(Clone, Debug)]
 pub enum AgentEvent {
     Message(Message),
+    Usage(crate::providers::base::ProviderUsage),
     McpNotification((String, ServerNotification)),
     HistoryReplaced(Conversation),
 }
@@ -1723,6 +1724,7 @@ impl Agent {
 
                             if let Some(ref usage) = usage {
                                 self.update_session_metrics(&session_config.id, session_config.schedule_id.clone(), usage, false).await?;
+                                yield AgentEvent::Usage(usage.clone());
                             }
 
                             if let Some(response) = response {

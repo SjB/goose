@@ -1838,6 +1838,7 @@ pub fn register_resolved_model(resolved: ResolvedLocalModel, source: &str) -> Re
                 mmproj_path: None,
                 mmproj_source_url: None,
                 mmproj_size_bytes: 0,
+                mmproj_checked: true,
                 shard_files,
             }
         }
@@ -1862,6 +1863,7 @@ pub fn register_resolved_model(resolved: ResolvedLocalModel, source: &str) -> Re
                 mmproj_path: None,
                 mmproj_source_url: None,
                 mmproj_size_bytes: 0,
+                mmproj_checked: true,
                 shard_files: vec![],
             }
         }

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Goose
+Comment=Open source AI agent for code, workflows, and automation
+Exec=goose-desktop %U
+Icon=io.github.block.Goose
+Terminal=false
+Type=Application
+Categories=Development;
+Keywords=AI;Agent;Assistant;Coding;Automation;MCP;
+MimeType=x-scheme-handler/goose;
+StartupWMClass=Goose

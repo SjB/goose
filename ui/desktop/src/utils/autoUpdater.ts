@@ -11,6 +11,7 @@ import {
   MenuItemConstructorOptions,
   Notification,
 } from 'electron';
+import { existsSync } from 'node:fs';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import log from './logger';
@@ -25,6 +26,8 @@ import {
   trackUpdateDownloadCompleted,
   trackUpdateInstallInitiated,
 } from './analytics';
+
+const FLATPAK_UPDATE_MESSAGE = 'Updates are managed by Flatpak for this installation.';
 
 let updateAvailable = false;
 let trayRef: Tray | null = null;
@@ -57,6 +60,13 @@ export function registerUpdateIpcHandlers() {
 
   // IPC handlers for renderer process
   ipcMain.handle('check-for-updates', async () => {
+    if (process.platform === 'linux' && app.isPackaged && existsSync('/.flatpak-info')) {
+      return {
+        updateInfo: null,
+        error: FLATPAK_UPDATE_MESSAGE,
+      };
+    }
+
     const currentVersion = autoUpdater.currentVersion?.version || app.getVersion();
     const checkStartTime = Date.now();
 
@@ -201,6 +211,10 @@ export function registerUpdateIpcHandlers() {
   });
 
   ipcMain.handle('download-update', async () => {
+    if (process.platform === 'linux' && app.isPackaged && existsSync('/.flatpak-info')) {
+      return { success: false, error: FLATPAK_UPDATE_MESSAGE };
+    }
+
     try {
       if (isUsingGitHubFallback && githubUpdateInfo.downloadUrl && githubUpdateInfo.latestVersion) {
         log.info('Using GitHub fallback for download...');
@@ -256,6 +270,10 @@ export function registerUpdateIpcHandlers() {
   });
 
   ipcMain.handle('install-update', async () => {
+    if (process.platform === 'linux' && app.isPackaged && existsSync('/.flatpak-info')) {
+      return;
+    }
+
     if (isUsingGitHubFallback) {
       // For GitHub fallback, we need to handle the installation differently
       log.info('Installing update from GitHub fallback...');

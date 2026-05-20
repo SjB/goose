@@ -1,6 +1,7 @@
 {
   "name": "goose-app",
   "productName": "Goose",
+  "desktopName": "io.github.block.Goose.desktop",
   "version": "1.34.0",
   "description": "Goose App",
   "engines": {

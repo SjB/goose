@@ -55,6 +55,10 @@ import { BLOCKED_PROTOCOLS, WEB_PROTOCOLS } from './utils/urlSecurity';
 import { buildCSP } from './utils/csp';
 
 function shouldSetupUpdater(): boolean {
+  if (process.platform === 'linux' && fsSync.existsSync('/.flatpak-info')) {
+    return false;
+  }
+
   // Setup updater if either the flag is enabled OR dev updates are enabled
   return UPDATES_ENABLED || process.env.ENABLE_DEV_UPDATES === 'true';
 }

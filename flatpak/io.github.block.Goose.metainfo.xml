@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.block.Goose</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+  <name>Goose</name>
+  <summary>Open source AI agent for code, workflows, and automation</summary>
+  <developer id="io.github.block">
+    <name>Goose Contributors</name>
+  </developer>
+  <launchable type="desktop-id">io.github.block.Goose.desktop</launchable>
+  <description>
+    <p>Goose is an open source AI agent that runs on your machine as a native desktop app, CLI, and API.</p>
+    <p>It works across code, research, writing, automation, and general workflows while connecting to MCP servers and multiple model providers.</p>
+    <ul>
+      <li>Chat with an AI agent in a native desktop interface</li>
+      <li>Work with local files, projects, and shell-based workflows</li>
+      <li>Connect to model providers, MCP extensions, and custom recipes</li>
+      <li>Use the same Goose platform that powers the CLI and API clients</li>
+    </ul>
+  </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#5d6df5</color>
+    <color type="primary" scheme_preference="dark">#3546b3</color>
+  </branding>
+  <content_rating type="oars-1.1" />
+  <url type="homepage">https://goose-docs.ai/</url>
+  <url type="bugtracker">https://github.com/aaif-goose/goose/issues</url>
+  <url type="vcs-browser">https://github.com/aaif-goose/goose</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/aaif-goose/goose/5f93990f36b0893269284337aba4b8cb9b8e3b41/documentation/docs/assets/guides/ui-session-interface.png</image>
+      <caption>Main desktop session view</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/aaif-goose/goose/5f93990f36b0893269284337aba4b8cb9b8e3b41/documentation/docs/assets/guides/manage-extensions-ui.png</image>
+      <caption>Desktop settings for MCP extensions</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/aaif-goose/goose/5f93990f36b0893269284337aba4b8cb9b8e3b41/documentation/docs/assets/guides/square-mcp-goosin-menu.png</image>
+      <caption>Quick actions in the desktop app menu</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.34.1" date="2026-05-14">
+      <url type="details">https://github.com/aaif-goose/goose/releases/tag/v1.34.1</url>
+      <description>
+        <p>Latest stable Goose desktop release.</p>
+      </description>
+    </release>
+    <release version="1.34.0" date="2026-05-12">
+      <url type="details">https://github.com/aaif-goose/goose/releases/tag/v1.34.0</url>
+      <description>
+        <p>Stable Goose release with current desktop packaging baseline.</p>
+      </description>
+    </release>
+    <release version="1.33.1" date="2026-04-29">
+      <url type="details">https://github.com/aaif-goose/goose/releases/tag/v1.33.1</url>
+      <description>
+        <p>Maintenance release for the Goose desktop client.</p>
+      </description>
+    </release>
+  </releases>
+</component>

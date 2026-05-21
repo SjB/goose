@@ -421,7 +421,7 @@ impl MessageContent {
     pub fn tool_response<S: Into<String>>(id: S, tool_result: ToolResult<CallToolResult>) -> Self {
         MessageContent::ToolResponse(ToolResponse {
             id: id.into(),
-            tool_result: cap_tool_result_text(tool_result),
+            tool_result,
             metadata: None,
         })
     }
@@ -433,7 +433,7 @@ impl MessageContent {
     ) -> Self {
         MessageContent::ToolResponse(ToolResponse {
             id: id.into(),
-            tool_result: cap_tool_result_text(tool_result),
+            tool_result,
             metadata: metadata.cloned(),
         })
     }
@@ -595,80 +595,6 @@ impl MessageContent {
             _ => None,
         }
     }
-}
-
-/// Environment variable for overriding the per-tool-result text cap.
-///
-/// Value is in bytes. Set to `0` to disable capping. If unset, defaults to
-/// [`DEFAULT_TOOL_RESULT_MAX_BYTES`].
-pub const TOOL_RESULT_MAX_BYTES_ENV: &str = "GOOSE_TOOL_RESULT_MAX_BYTES";
-
-/// Default per-tool-result text cap. Picked to keep individual results well
-/// below the Anthropic per-block sweet spot while still allowing a meaningful
-/// chunk of output through (≈400 lines of typical source).
-pub const DEFAULT_TOOL_RESULT_MAX_BYTES: usize = 16_384;
-
-/// Look up the active per-tool-result text cap in bytes. Returns `None` when
-/// capping is disabled (env var set to `0`).
-fn tool_result_text_cap() -> Option<usize> {
-    match std::env::var(TOOL_RESULT_MAX_BYTES_ENV) {
-        Ok(v) => v
-            .trim()
-            .parse::<usize>()
-            .ok()
-            .and_then(|n| if n == 0 { None } else { Some(n) }),
-        Err(_) => Some(DEFAULT_TOOL_RESULT_MAX_BYTES),
-    }
-}
-
-/// If `text` exceeds `cap` bytes, truncate at a UTF-8 char boundary and append
-/// a marker telling the model how to retrieve the rest. Returns `None` when no
-/// change is needed so callers can avoid reallocating.
-fn cap_text(text: &str, cap: usize) -> Option<String> {
-    if text.len() <= cap {
-        return None;
-    }
-    // Find a safe UTF-8 boundary at or before `cap`.
-    let mut end = cap;
-    while end > 0 && !text.is_char_boundary(end) {
-        end -= 1;
-    }
-    let elided = text.len() - end;
-    let mut out = String::with_capacity(end + 220);
-    // `end` was just walked back to a char boundary above, so this slice is safe.
-    out.push_str(text.get(..end).unwrap_or(""));
-    out.push_str(&format!(
-        "\n\n[goose: truncated {elided} bytes of tool output (cap={cap} bytes, set {env}=0 to disable, or pass a larger value). \
-Re-call the tool with narrower parameters (e.g. line/limit, grep, head, or a more specific path) to inspect the rest.]",
-        env = TOOL_RESULT_MAX_BYTES_ENV,
-    ));
-    Some(out)
-}
-
-/// Apply [`cap_text`] to every text block inside a `CallToolResult` and return
-/// the (possibly modified) result. Non-text content (images, audio, resources)
-/// is left untouched.
-fn cap_call_tool_result(mut result: CallToolResult) -> CallToolResult {
-    let cap = match tool_result_text_cap() {
-        Some(c) => c,
-        None => return result,
-    };
-    for content in &mut result.content {
-        if let RawContent::Text(text_content) = &mut content.raw {
-            if let Some(new_text) = cap_text(&text_content.text, cap) {
-                text_content.text = new_text;
-            }
-        }
-    }
-    result
-}
-
-/// Apply the per-text-block cap to a `ToolResult<CallToolResult>` in place,
-/// preserving the Ok/Err shape.
-pub(crate) fn cap_tool_result_text(
-    result: ToolResult<CallToolResult>,
-) -> ToolResult<CallToolResult> {
-    result.map(cap_call_tool_result)
 }
 
 impl From<Content> for MessageContent {
@@ -1831,80 +1757,5 @@ mod tests {
         });
         let req_no_summary = make_tool_request(Some(meta_no_summary));
         assert!(req_no_summary.persisted_chain_summary().is_none());
-    }
-
-    use rmcp::model::{CallToolResult, Content};
-    use serial_test::serial;
-
-    fn text_from_tool_response(content: &MessageContent) -> Vec<String> {
-        let MessageContent::ToolResponse(tr) = content else {
-            panic!("expected ToolResponse");
-        };
-        let result = tr.tool_result.as_ref().expect("tool result ok");
-        result
-            .content
-            .iter()
-            .filter_map(|c| match &c.raw {
-                rmcp::model::RawContent::Text(t) => Some(t.text.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
-    #[test]
-    #[serial]
-    fn test_tool_result_text_under_cap_passes_through() {
-        std::env::remove_var(super::TOOL_RESULT_MAX_BYTES_ENV);
-        let small = "a".repeat(100);
-        let result = CallToolResult::success(vec![Content::text(small.clone())]);
-        let content = MessageContent::tool_response("id1", Ok(result));
-        let texts = text_from_tool_response(&content);
-        assert_eq!(texts, vec![small]);
-    }
-
-    #[test]
-    #[serial]
-    fn test_tool_result_text_over_cap_is_truncated() {
-        std::env::set_var(super::TOOL_RESULT_MAX_BYTES_ENV, "1024");
-        let big = "x".repeat(8 * 1024);
-        let result = CallToolResult::success(vec![Content::text(big)]);
-        let content = MessageContent::tool_response("id1", Ok(result));
-        let texts = text_from_tool_response(&content);
-        assert_eq!(texts.len(), 1);
-        let t = &texts[0];
-        assert!(
-            t.len() < 8 * 1024,
-            "expected truncation, got {} bytes",
-            t.len()
-        );
-        assert!(t.contains("[goose: truncated"));
-        assert!(t.contains("bytes of tool output"));
-        std::env::remove_var(super::TOOL_RESULT_MAX_BYTES_ENV);
-    }
-
-    #[test]
-    #[serial]
-    fn test_tool_result_text_cap_disabled_via_env_zero() {
-        std::env::set_var(super::TOOL_RESULT_MAX_BYTES_ENV, "0");
-        let big = "x".repeat(8 * 1024);
-        let result = CallToolResult::success(vec![Content::text(big.clone())]);
-        let content = MessageContent::tool_response("id1", Ok(result));
-        let texts = text_from_tool_response(&content);
-        assert_eq!(texts, vec![big]);
-        std::env::remove_var(super::TOOL_RESULT_MAX_BYTES_ENV);
-    }
-
-    #[test]
-    #[serial]
-    fn test_tool_result_cap_respects_utf8_boundary() {
-        std::env::set_var(super::TOOL_RESULT_MAX_BYTES_ENV, "10");
-        // "世界" is 6 bytes in UTF-8; build a string that crosses cap=10 mid-char.
-        let s = format!("{}{}", "a".repeat(8), "世界");
-        let result = CallToolResult::success(vec![Content::text(s)]);
-        let content = MessageContent::tool_response("id1", Ok(result));
-        let texts = text_from_tool_response(&content);
-        // Must not panic; resulting text must be valid UTF-8 and contain marker.
-        assert!(texts[0].contains("[goose: truncated"));
-        std::env::remove_var(super::TOOL_RESULT_MAX_BYTES_ENV);
     }
 }

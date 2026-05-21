@@ -7,15 +7,12 @@
 //! view are untouched — only the conversation snapshot sent to the LLM is
 //! deduped.
 //!
-//! See `BRAINROT.md` (P1) for rationale.
-//!
 //! Disable by setting `GOOSE_TOOL_RESULT_DEDUP=0`.
 //!
-//! This is intentionally conservative: dedup only fires when the
-//! `tool_name + arguments` are byte-identical to a prior call AND the text
-//! body is byte-identical to that prior call's response. Any change in
-//! either arguments or response content (e.g. the file actually changed)
-//! flows through unmodified.
+//! Dedup only fires when the `tool_name + arguments` are byte-identical to
+//! a prior call AND the text body is byte-identical to that prior call's
+//! response. Any change in either arguments or response content (e.g. the
+//! file actually changed) flows through unmodified.
 
 use std::collections::HashMap;
 

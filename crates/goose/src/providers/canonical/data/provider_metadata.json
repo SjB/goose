@@ -195,7 +195,7 @@
     "env": [
       "ROUTING_RUN_API_KEY"
     ],
-    "model_count": 24
+    "model_count": 26
   },
   {
     "id": "the-grid-ai",
@@ -272,7 +272,7 @@
     "env": [
       "NOVITA_API_KEY"
     ],
-    "model_count": 99
+    "model_count": 104
   },
   {
     "id": "digitalocean",
@@ -305,7 +305,7 @@
     "env": [
       "KILO_API_KEY"
     ],
-    "model_count": 344
+    "model_count": 345
   },
   {
     "id": "cloudflare-workers-ai",
@@ -339,7 +339,7 @@
     "env": [
       "XIAOMI_API_KEY"
     ],
-    "model_count": 6
+    "model_count": 8
   },
   {
     "id": "morph",
@@ -406,7 +406,7 @@
     "env": [
       "XIAOMI_API_KEY"
     ],
-    "model_count": 6
+    "model_count": 8
   },
   {
     "id": "cloudferro-sherlock",
@@ -582,7 +582,7 @@
     "env": [
       "OPENCODE_API_KEY"
     ],
-    "model_count": 14
+    "model_count": 15
   },
   {
     "id": "llmgateway",
@@ -626,7 +626,7 @@
     "env": [
       "XIAOMI_API_KEY"
     ],
-    "model_count": 6
+    "model_count": 8
   },
   {
     "id": "siliconflow",
@@ -803,7 +803,7 @@
     "env": [
       "OPENCODE_API_KEY"
     ],
-    "model_count": 62
+    "model_count": 63
   },
   {
     "id": "mixlayer",

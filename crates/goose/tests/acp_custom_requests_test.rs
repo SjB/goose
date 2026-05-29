@@ -553,7 +553,6 @@ fn test_custom_unknown_method() {
 #[test]
 #[serial]
 fn test_developer_fs_requests_use_acp_session_id() {
-    write_acp_global_config("GOOSE_MODEL: gpt-4.1\nGOOSE_PROVIDER: openai\n");
     run_test(async {
         let seen_session_id = Arc::new(Mutex::new(None::<String>));
         let seen_session_id_clone = Arc::clone(&seen_session_id);
@@ -572,9 +571,14 @@ fn test_developer_fs_requests_use_acp_session_id() {
             Arc::new(IgnoreSessionId),
         )
         .await;
+        let config_dir = write_acp_global_config(&format!(
+            "GOOSE_MODEL: gpt-4.1\nGOOSE_PROVIDER: openai\nOPENAI_HOST: {}\n",
+            openai.uri()
+        ));
         let config = TestConnectionConfig {
             // gpt-5-nano routes to the Responses API; use a Chat Completions
             // model so the canned SSE fixtures are parsed correctly.
+            data_root: config_dir,
             current_model: "gpt-4.1".to_string(),
             read_text_file: Some(Arc::new(move |req| {
                 *seen_session_id_clone.lock().unwrap() = Some(req.session_id.0.to_string());

@@ -18,7 +18,7 @@ import { TooltipWrapper } from './settings/providers/subcomponents/buttons/Toolt
 import MCPUIResourceRenderer from './MCPUIResourceRenderer';
 import { isUIResource } from '@mcp-ui/client';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { CallToolResponse, ContentBlock, EmbeddedResource, Permission } from '../api';
+import { CallToolResponse, ContentBlock, EmbeddedResource } from '../api';
 
 import McpAppRenderer from './McpApps/McpAppRenderer';
 import ToolApprovalButtons from './ToolApprovalButtons';
@@ -105,7 +105,6 @@ interface ToolCallWithResponseProps {
   append?: (value: string) => void;
   confirmationContent?: ToolConfirmationData;
   isApprovalClicked?: boolean;
-  onAcpPermissionDecision?: (toolCallId: string, action: Permission) => Promise<boolean>;
 }
 
 function getSubagentSessionId(
@@ -229,7 +228,6 @@ export default function ToolCallWithResponse({
   append,
   confirmationContent,
   isApprovalClicked,
-  onAcpPermissionDecision,
 }: ToolCallWithResponseProps) {
   const intl = useIntl();
   // Handle both the wrapped ToolResult format and the unwrapped format
@@ -287,9 +285,6 @@ export default function ToolCallWithResponse({
                   prompt: confirmationContent.prompt ?? undefined,
                   sessionId,
                   isClicked: isApprovalClicked,
-                  onAcpPermissionDecision: (action) =>
-                    onAcpPermissionDecision?.(confirmationContent.id, action) ??
-                    Promise.resolve(false),
                 }}
               />
             </div>

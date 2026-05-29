@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo, startTransiti
 import { defineMessages, useIntl } from '../../i18n';
 import {
   MessageSquareText,
+  Target,
   AlertCircle,
   Calendar,
   Folder,
@@ -14,6 +15,7 @@ import {
   LoaderCircle,
   ExternalLink,
   Copy,
+  Puzzle,
 } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -27,6 +29,7 @@ import { errorMessage } from '../../utils/conversionUtils';
 import { Skeleton } from '../ui/skeleton';
 import { toast } from 'react-toastify';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
 import {
   Dialog,
   DialogContent,
@@ -36,23 +39,24 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import {
+  deleteSession,
+  exportSession,
+  forkSession,
+  importSession,
   importSessionNostr,
+  listSessions,
   searchSessions,
   shareSessionNostr,
+  Session,
+  updateSessionName,
+  ExtensionConfig,
+  ExtensionData,
 } from '../../api';
 import { getTunnelStatus } from '../../api/sdk.gen';
-import {
-  acpDeleteSession,
-  acpExportSession,
-  acpForkSession,
-  acpImportSession,
-  acpListSessions,
-  acpRenameSession,
-  sessionInfoToListItem,
-  SessionListItem,
-} from '../../acp/sessions';
-import { seedSessionCwdHints, useSessionCwdChangeListener } from '../../hooks/useChatStream';
+import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
 import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
+import { shouldShowNewChatTitle } from '../../sessions';
+import { DEFAULT_CHAT_TITLE } from '../../contexts/ChatContext';
 
 const i18n = defineMessages({
   editSessionTitle: { id: 'sessions.edit.title', defaultMessage: 'Edit Session Description' },
@@ -96,13 +100,27 @@ const i18n = defineMessages({
   deleteSession: { id: 'sessions.action.delete', defaultMessage: 'Delete session' },
   exportSession: { id: 'sessions.action.export', defaultMessage: 'Export session' },
   shareNostrSession: { id: 'sessions.action.shareNostr', defaultMessage: 'Share encrypted Nostr link' },
+  extensions: { id: 'sessions.extensions', defaultMessage: 'Extensions:' },
   shareNostrTitle: { id: 'sessions.shareNostr.title', defaultMessage: 'Encrypted Nostr Share Link' },
   shareNostrDesc: { id: 'sessions.shareNostr.description', defaultMessage: 'Anyone with this link can fetch and decrypt the session. Treat it like a secret.' },
   close: { id: 'sessions.close', defaultMessage: 'Close' },
 });
 
+function getSessionExtensionNames(extensionData: ExtensionData): string[] {
+  try {
+    const enabledExtensionData = extensionData?.['enabled_extensions.v0'] as
+      | { extensions?: ExtensionConfig[] }
+      | undefined;
+    if (!enabledExtensionData?.extensions) return [];
+
+    return enabledExtensionData.extensions.map((ext) => formatExtensionName(ext.name));
+  } catch {
+    return [];
+  }
+}
+
 interface EditSessionModalProps {
-  session: SessionListItem | null;
+  session: Session | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (sessionId: string, newDescription: string) => Promise<void>;
@@ -135,7 +153,11 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
 
       setIsUpdating(true);
       try {
-        await acpRenameSession(session.id, trimmedDescription);
+        await updateSessionName({
+          path: { session_id: session.id },
+          body: { name: trimmedDescription },
+          throwOnError: true,
+        });
         await onSave(session.id, trimmedDescription);
         onClose();
         setTimeout(() => {
@@ -245,8 +267,8 @@ interface SessionListViewProps {
 const SessionListView: React.FC<SessionListViewProps> = React.memo(
   ({ onSelectSession, selectedSessionId }) => {
     const intl = useIntl();
-    const [sessions, setSessions] = useState<SessionListItem[]>([]);
-    const [filteredSessions, setFilteredSessions] = useState<SessionListItem[]>([]);
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
     const [dateGroups, setDateGroups] = useState<DateGroup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showSkeleton, setShowSkeleton] = useState(true);
@@ -262,11 +284,11 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
 
     // Edit modal state
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editingSession, setEditingSession] = useState<SessionListItem | null>(null);
+    const [editingSession, setEditingSession] = useState<Session | null>(null);
 
     // Delete confirmation modal state
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-    const [sessionToDelete, setSessionToDelete] = useState<SessionListItem | null>(null);
+    const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
 
     const [showImportLinkModal, setShowImportLinkModal] = useState(false);
     const [nostrImportLink, setNostrImportLink] = useState('');
@@ -328,8 +350,8 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       setShowContent(false);
       setError(null);
       try {
-        const resp = await acpListSessions();
-        const sessions = resp.sessions.map(sessionInfoToListItem);
+        const resp = await listSessions<true>({ throwOnError: true });
+        const sessions = resp.data.sessions;
         // Use startTransition to make state updates non-blocking
         startTransition(() => {
           setSessions(sessions);
@@ -348,19 +370,6 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
     useEffect(() => {
       loadSessions();
     }, [loadSessions]);
-
-    useEffect(() => {
-      seedSessionCwdHints(sessions);
-    }, [sessions]);
-
-    useSessionCwdChangeListener((detail) => {
-      setSessions((prev) => {
-        if (!prev.some((s) => s.id === detail.sessionId)) return prev;
-        return prev.map((s) =>
-          s.id === detail.sessionId ? { ...s, workingDir: detail.newCwd } : s
-        );
-      });
-    });
 
     // Hide Nostr sharing when tunnel is disabled (restricted/enterprise bundles)
     useEffect(() => {
@@ -499,20 +508,24 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       );
     }, []);
 
-    const handleEditSession = useCallback((session: SessionListItem) => {
+    const handleEditSession = useCallback((session: Session) => {
       setEditingSession(session);
       setShowEditModal(true);
     }, []);
 
-    const handleDeleteSession = useCallback((session: SessionListItem) => {
+    const handleDeleteSession = useCallback((session: Session) => {
       setSessionToDelete(session);
       setShowDeleteConfirmation(true);
     }, []);
 
     const handleDuplicateSession = useCallback(
-      async (session: SessionListItem) => {
+      async (session: Session) => {
         try {
-          await acpForkSession(session.id, session.workingDir);
+          await forkSession({
+            path: { session_id: session.id },
+            body: { truncate: false, copy: true },
+            throwOnError: true,
+          });
           toast.success(intl.formatMessage(i18n.duplicateSuccess, { name: session.name }));
           await loadSessions();
         } catch (error) {
@@ -532,7 +545,10 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       setSessionToDelete(null);
 
       try {
-        await acpDeleteSession(sessionToDeleteId);
+        await deleteSession({
+          path: { session_id: sessionToDeleteId },
+          throwOnError: true,
+        });
         toast.success(intl.formatMessage(i18n.deleteSuccess));
         window.dispatchEvent(
           new CustomEvent(AppEvents.SESSION_DELETED, { detail: { sessionId: sessionToDeleteId } })
@@ -549,10 +565,15 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       setSessionToDelete(null);
     }, []);
 
-    const handleExportSession = useCallback(async (session: SessionListItem, e: React.MouseEvent) => {
+    const handleExportSession = useCallback(async (session: Session, e: React.MouseEvent) => {
       e.stopPropagation();
 
-      const json = await acpExportSession(session.id);
+      const response = await exportSession({
+        path: { session_id: session.id },
+        throwOnError: true,
+      });
+
+      const json = response.data;
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -566,7 +587,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
     }, [intl]);
 
     const handleShareSessionNostr = useCallback(
-      async (session: SessionListItem, e: React.MouseEvent) => {
+      async (session: Session, e: React.MouseEvent) => {
         e.stopPropagation();
         setSharingSessionId(session.id);
         try {
@@ -628,7 +649,10 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
 
         try {
           const json = await file.text();
-          await acpImportSession(json);
+          await importSession({
+            body: { json },
+            throwOnError: true,
+          });
 
           toast.success(intl.formatMessage(i18n.importSuccess));
           await loadSessions();
@@ -643,10 +667,10 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       [loadSessions, intl]
     );
 
-    const handleOpenInNewWindow = useCallback((session: SessionListItem, e: React.MouseEvent) => {
+    const handleOpenInNewWindow = useCallback((session: Session, e: React.MouseEvent) => {
       e.stopPropagation();
       window.electron.createChatWindow({
-        dir: session.workingDir,
+        dir: session.working_dir,
         resumeSessionId: session.id,
         viewType: 'pair',
       });
@@ -662,13 +686,13 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       onOpenInNewWindow,
       isSharing,
     }: {
-      session: SessionListItem;
-      onEditClick: (session: SessionListItem) => void;
-      onDuplicateClick: (session: SessionListItem) => void;
-      onDeleteClick: (session: SessionListItem) => void;
-      onExportClick: (session: SessionListItem, e: React.MouseEvent) => void;
-      onShareClick: (session: SessionListItem, e: React.MouseEvent) => void;
-      onOpenInNewWindow: (session: SessionListItem, e: React.MouseEvent) => void;
+      session: Session;
+      onEditClick: (session: Session) => void;
+      onDuplicateClick: (session: Session) => void;
+      onDeleteClick: (session: Session) => void;
+      onExportClick: (session: Session, e: React.MouseEvent) => void;
+      onShareClick: (session: Session, e: React.MouseEvent) => void;
+      onOpenInNewWindow: (session: Session, e: React.MouseEvent) => void;
       isSharing: boolean;
     }) {
       const handleEditClick = useCallback(
@@ -720,7 +744,13 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
         [onOpenInNewWindow, session]
       );
 
-      const displayName = session.name;
+      const displayName = shouldShowNewChatTitle(session) ? DEFAULT_CHAT_TITLE : session.name;
+
+      // Get extension names for this session
+      const extensionNames = useMemo(
+        () => getSessionExtensionNames(session.extension_data),
+        [session.extension_data]
+      );
 
       return (
         <Card
@@ -733,11 +763,11 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
             <div className="flex-1 mt-2">
               <div className="flex items-center text-text-secondary text-xs">
                 <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-                <span>{formatMessageTimestamp(Date.parse(session.updatedAt) / 1000)}</span>
+                <span>{formatMessageTimestamp(Date.parse(session.updated_at) / 1000)}</span>
               </div>
               <div className="flex items-center text-text-secondary text-xs">
                 <Folder className="w-3 h-3 mr-1 flex-shrink-0" />
-                <span className="truncate">{session.workingDir}</span>
+                <span className="truncate">{session.working_dir}</span>
               </div>
             </div>
           </div>
@@ -745,8 +775,36 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
             <div className="flex items-center space-x-3 text-xs text-text-secondary">
               <div className="flex items-center">
                 <MessageSquareText className="w-3 h-3 mr-1" />
-                <span className="font-mono">{session.messageCount}</span>
+                <span className="font-mono">{session.message_count}</span>
               </div>
+              {session.total_tokens !== null && (
+                <div className="flex items-center">
+                  <Target className="w-3 h-3 mr-1" />
+                  <span className="font-mono">{(session.total_tokens || 0).toLocaleString()}</span>
+                </div>
+              )}
+              {extensionNames.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                        <Puzzle className="w-3 h-3 mr-1" />
+                        <span className="font-mono">{extensionNames.length}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <div className="text-xs">
+                        <div className="font-medium mb-1">{intl.formatMessage(i18n.extensions)}</div>
+                        <ul className="list-disc list-inside">
+                          {extensionNames.map((name) => (
+                            <li key={name}>{name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

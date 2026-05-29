@@ -9,8 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { acpUpdateWorkingDir } from '../../acp/sessions';
-import { AppEvents } from '../../constants/events';
+import { updateWorkingDir } from '../../api';
 import { toast } from 'react-toastify';
 import { defineMessages, useIntl } from '../../i18n';
 
@@ -103,12 +102,9 @@ export const DirSwitcher: React.FC<DirSwitcherProps> = ({
       onRestartStart?.();
 
       try {
-        await acpUpdateWorkingDir(sessionId, newDir);
-        window.dispatchEvent(
-          new CustomEvent(AppEvents.SESSION_CWD_CHANGED, {
-            detail: { sessionId, newCwd: newDir },
-          })
-        );
+        await updateWorkingDir({
+          body: { session_id: sessionId, working_dir: newDir },
+        });
       } catch (error) {
         console.error('[DirSwitcher] Failed to update working directory:', error);
         toast.error(intl.formatMessage(i18n.failedToUpdateWorkingDir));

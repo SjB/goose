@@ -11,13 +11,12 @@ import {
   getToolResponses,
   getToolConfirmationContent,
   getElicitationContent,
-  getElicitationResponseIds,
   getPendingToolConfirmationIds,
   getAnyToolConfirmationData,
   ToolConfirmationData,
   NotificationEvent,
 } from '../types/message';
-import { Message, Permission } from '../api';
+import { Message } from '../api';
 import ToolCallConfirmation from './ToolCallConfirmation';
 import ElicitationRequest from './ElicitationRequest';
 import MessageCopyLink from './MessageCopyLink';
@@ -36,7 +35,6 @@ interface GooseMessageProps {
     elicitationId: string,
     userData: Record<string, unknown>
   ) => Promise<void>;
-  onAcpPermissionDecision?: (toolCallId: string, action: Permission) => Promise<boolean>;
 }
 
 export default function GooseMessage({
@@ -47,7 +45,6 @@ export default function GooseMessage({
   append,
   isStreaming,
   submitElicitationResponse,
-  onAcpPermissionDecision,
 }: GooseMessageProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,7 +56,6 @@ export default function GooseMessage({
   const messageIndex = messages.findIndex((msg) => msg.id === message.id);
   const toolConfirmationContent = getToolConfirmationContent(message);
   const elicitationContent = getElicitationContent(message);
-  const elicitationResponseIds = useMemo(() => getElicitationResponseIds(messages), [messages]);
 
   const findConfirmationForToolAcrossMessages = (
     toolRequestId: string
@@ -185,7 +181,6 @@ export default function GooseMessage({
                         append={append}
                         confirmationContent={confirmationContent}
                         isApprovalClicked={isApprovalClicked}
-                        onAcpPermissionDecision={onAcpPermissionDecision}
                       />
                     </div>
                   );
@@ -203,17 +198,13 @@ export default function GooseMessage({
             sessionId={sessionId}
             isClicked={false}
             actionRequiredContent={toolConfirmationContent}
-            onAcpPermissionDecision={onAcpPermissionDecision}
           />
         )}
 
         {hasElicitation && submitElicitationResponse && (
           <ElicitationRequest
             isCancelledMessage={false}
-            isClicked={
-              elicitationContent.data.actionType === 'elicitation' &&
-              elicitationResponseIds.has(elicitationContent.data.id)
-            }
+            isClicked={false}
             actionRequiredContent={elicitationContent}
             onSubmit={submitElicitationResponse}
           />

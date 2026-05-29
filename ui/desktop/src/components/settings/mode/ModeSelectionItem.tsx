@@ -41,10 +41,8 @@ const i18n = defineMessages({
 
 export interface GooseMode {
   key: string;
-  label?: string;
-  description?: string;
-  labelDescriptor?: { id: string; defaultMessage: string };
-  descriptionDescriptor?: { id: string; defaultMessage: string };
+  labelDescriptor: { id: string; defaultMessage: string };
+  descriptionDescriptor: { id: string; defaultMessage: string };
 }
 
 export const all_goose_modes: GooseMode[] = [
@@ -84,10 +82,6 @@ export const ModeSelectionItem = forwardRef<HTMLDivElement, ModeSelectionItemPro
     const [checked, setChecked] = useState(currentMode == mode.key);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
-    const label = mode.label ?? (mode.labelDescriptor ? intl.formatMessage(mode.labelDescriptor) : mode.key);
-    const description =
-      mode.description ??
-      (mode.descriptionDescriptor ? intl.formatMessage(mode.descriptionDescriptor) : undefined);
 
     useEffect(() => {
       setChecked(currentMode === mode.key);
@@ -101,8 +95,10 @@ export const ModeSelectionItem = forwardRef<HTMLDivElement, ModeSelectionItemPro
         >
           <div className="flex">
             <div>
-              <h3 className="text-text-primary">{label}</h3>
-              {showDescription && description && <p className="text-text-secondary mt-[2px]">{description}</p>}
+              <h3 className="text-text-primary">{intl.formatMessage(mode.labelDescriptor)}</h3>
+              {showDescription && (
+                <p className="text-text-secondary mt-[2px]">{intl.formatMessage(mode.descriptionDescriptor)}</p>
+              )}
             </div>
           </div>
 

@@ -29,7 +29,7 @@ impl GooseAcpAgent {
         };
         let config = Config::global();
         let (resolved_provider, resolved_model_config) =
-            super::session_setup::resolve_default_provider_model_config(config)?;
+            super::resolve_default_provider_model_config(config)?;
         let current_mode: GooseMode = config.get_goose_mode().unwrap_or_default();
         let t0 = std::time::Instant::now();
         let mut goose_session = self
@@ -43,12 +43,8 @@ impl GooseAcpAgent {
             .await
             .internal_err_ctx("Failed to create session")?;
         let mut builder = self.session_manager.update(&goose_session.id);
-        let extension_data = super::session_setup::build_enabled_extensions_data(
-            self,
-            config,
-            &goose_session,
-            args.mcp_servers,
-        )?;
+        let extension_data =
+            self.build_enabled_extensions_data(config, &goose_session, args.mcp_servers)?;
         builder = builder
             .provider_name(resolved_provider)
             .model_config(resolved_model_config)

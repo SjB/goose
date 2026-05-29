@@ -34,14 +34,14 @@ impl GooseAcpAgent {
             .await
             .internal_err()?;
 
-        let goose_session = super::session_setup::prepare_session_for_activation(
-            self,
-            goose_session,
-            args.cwd.clone(),
-            args.mcp_servers,
-            false,
-        )
-        .await?;
+        let goose_session = self
+            .prepare_session_for_activation(
+                goose_session,
+                args.cwd.clone(),
+                args.mcp_servers,
+                false,
+            )
+            .await?;
 
         let (_agent, _extension_results) = self
             .activate_acp_session(cx, &goose_session, HashMap::new())

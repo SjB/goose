@@ -212,14 +212,9 @@ impl GooseAcpAgent {
                     .data(format!("Session not found: {}", session_id_str))
             })?;
 
-        session = super::session_setup::prepare_session_for_activation(
-            self,
-            session,
-            args.cwd.clone(),
-            args.mcp_servers,
-            true,
-        )
-        .await?;
+        session = self
+            .prepare_session_for_activation(session, args.cwd.clone(), args.mcp_servers, true)
+            .await?;
 
         let (agent, extension_results) = self.prepare_acp_session_agent(cx, &session).await?;
         let replay_tool_requests = replay_conversation_to_client(cx, &session)?;

@@ -91,6 +91,25 @@ export type UpdateWorkingDirRequest_unstable = {
 };
 
 /**
+ * Set, append, or clear system prompt text for a session.
+ *
+ * `mode: "set"` replaces Goose's base system prompt. `mode: "append"` adds an
+ * instruction under "Additional Instructions". Reusing a key replaces the
+ * previous value for that mode/key; sending empty text clears it.
+ */
+export type SetSessionSystemPromptRequest_unstable = {
+    sessionId: string;
+    mode?: SessionSystemPromptMode;
+    key?: string | null;
+    text: string;
+};
+
+/**
+ * How a session system prompt update should be applied.
+ */
+export type SessionSystemPromptMode = 'set' | 'append';
+
+/**
  * Delete a session.
  */
 export type DeleteSessionRequest = {
@@ -283,6 +302,18 @@ export type ProviderInventoryModelDto = {
      * Whether this model should appear in the compact recommended picker.
      */
     recommended?: boolean;
+};
+
+/**
+ * List the raw model identifiers returned by a provider's live supported-models API.
+ */
+export type ProviderSupportedModelsListRequest_unstable = {
+    providerId: string;
+};
+
+export type ProviderSupportedModelsListResponse_unstable = {
+    providerId: string;
+    models: Array<string>;
 };
 
 /**
@@ -713,15 +744,6 @@ export type ImportSessionResponse_unstable = {
 };
 
 /**
- * Submit a response for a pending MCP elicitation in an active session.
- */
-export type ElicitationRespondRequest_unstable = {
-    sessionId: string;
-    elicitationId: string;
-    userData?: unknown;
-};
-
-/**
  * Update the project association for a session.
  */
 export type UpdateSessionProjectRequest_unstable = {
@@ -1065,84 +1087,17 @@ export type DictationModelSelectRequest_unstable = {
     modelId: string;
 };
 
-/**
- * Goose-custom session update notification — a parallel to ACP's
- * `session/update` carrying goose-specific update variants.
- */
-export type GooseSessionNotification_unstable = {
-    sessionId: string;
-    update: GooseSessionUpdate;
-};
-
-/**
- * Discriminated union of goose-specific session update payloads.
- * Variant tag matches ACP's convention (`sessionUpdate: "<snake_case>"`).
- *
- * `discriminator.mapping` is what makes TS codegen (`@hey-api/openapi-ts`)
- * emit the correct snake_case tag value even when this enum has a single
- * variant. Add a mapping entry per variant.
- */
-export type GooseSessionUpdate = ({
-    sessionUpdate: 'usage_update';
-} & SessionUsageUpdate) | ({
-    sessionUpdate: 'status_message';
-} & StatusMessageUpdate) | ({
-    sessionUpdate: 'interaction_update';
-} & InteractionUpdate);
-
-/**
- * Streaming context-window usage update for a session.
- */
-export type SessionUsageUpdate = {
-    used: number;
-    contextLimit: number;
-    accumulatedInputTokens: number;
-    accumulatedOutputTokens: number;
-    accumulatedCost?: number | null;
-};
-
-export type StatusMessage = {
-    message: string;
-    type: 'notice';
-} | {
-    message: string;
-    type: 'progress';
-};
-
-/**
- * Live UI/session status. This is not conversation transcript content, and
- * should not be persisted or replayed as history.
- */
-export type StatusMessageUpdate = {
-    status: StatusMessage;
-};
-
-export type Interaction = {
-    id: string;
-    state: InteractionState;
-    message?: string | null;
-    requestedSchema?: unknown;
-    type: 'elicitation';
-};
-
-export type InteractionState = 'pending' | 'submitted';
-
-export type InteractionUpdate = {
-    interaction: Interaction;
-    _meta?: unknown;
-};
-
 export type ExtRequest = {
     id: string;
     method: string;
-    params?: AddExtensionRequest_unstable | RemoveExtensionRequest_unstable | GetToolsRequest_unstable | GooseToolCallRequest_unstable | ReadResourceRequest_unstable | UpdateWorkingDirRequest_unstable | DeleteSessionRequest | GetExtensionsRequest_unstable | AddConfigExtensionRequest_unstable | RemoveConfigExtensionRequest_unstable | ToggleConfigExtensionRequest_unstable | GetSessionExtensionsRequest_unstable | ListProvidersRequest_unstable | ProviderCatalogListRequest_unstable | ProviderSetupCatalogListRequest_unstable | ProviderCatalogTemplateRequest_unstable | CustomProviderCreateRequest_unstable | CustomProviderReadRequest_unstable | CustomProviderUpdateRequest_unstable | CustomProviderDeleteRequest_unstable | RefreshProviderInventoryRequest_unstable | ProviderConfigReadRequest_unstable | ProviderConfigStatusRequest_unstable | ProviderConfigSaveRequest_unstable | ProviderConfigDeleteRequest_unstable | ProviderConfigAuthenticateRequest_unstable | PreferencesReadRequest_unstable | PreferencesSaveRequest_unstable | PreferencesRemoveRequest_unstable | DefaultsReadRequest_unstable | DefaultsSaveRequest_unstable | OnboardingImportScanRequest_unstable | OnboardingImportApplyRequest_unstable | ExportSessionRequest_unstable | ImportSessionRequest_unstable | ElicitationRespondRequest_unstable | UpdateSessionProjectRequest_unstable | RenameSessionRequest_unstable | ArchiveSessionRequest_unstable | UnarchiveSessionRequest_unstable | CreateSourceRequest_unstable | ListSourcesRequest_unstable | UpdateSourceRequest_unstable | DeleteSourceRequest_unstable | ExportSourceRequest_unstable | ImportSourcesRequest_unstable | DictationTranscribeRequest_unstable | DictationConfigRequest_unstable | DictationSecretSaveRequest_unstable | DictationSecretDeleteRequest_unstable | DictationModelsListRequest_unstable | DictationModelDownloadRequest_unstable | DictationModelDownloadProgressRequest_unstable | DictationModelCancelRequest_unstable | DictationModelDeleteRequest_unstable | DictationModelSelectRequest_unstable | {
+    params?: AddExtensionRequest_unstable | RemoveExtensionRequest_unstable | GetToolsRequest_unstable | GooseToolCallRequest_unstable | ReadResourceRequest_unstable | UpdateWorkingDirRequest_unstable | SetSessionSystemPromptRequest_unstable | DeleteSessionRequest | GetExtensionsRequest_unstable | AddConfigExtensionRequest_unstable | RemoveConfigExtensionRequest_unstable | ToggleConfigExtensionRequest_unstable | GetSessionExtensionsRequest_unstable | ListProvidersRequest_unstable | ProviderSupportedModelsListRequest_unstable | ProviderCatalogListRequest_unstable | ProviderSetupCatalogListRequest_unstable | ProviderCatalogTemplateRequest_unstable | CustomProviderCreateRequest_unstable | CustomProviderReadRequest_unstable | CustomProviderUpdateRequest_unstable | CustomProviderDeleteRequest_unstable | RefreshProviderInventoryRequest_unstable | ProviderConfigReadRequest_unstable | ProviderConfigStatusRequest_unstable | ProviderConfigSaveRequest_unstable | ProviderConfigDeleteRequest_unstable | ProviderConfigAuthenticateRequest_unstable | PreferencesReadRequest_unstable | PreferencesSaveRequest_unstable | PreferencesRemoveRequest_unstable | DefaultsReadRequest_unstable | DefaultsSaveRequest_unstable | OnboardingImportScanRequest_unstable | OnboardingImportApplyRequest_unstable | ExportSessionRequest_unstable | ImportSessionRequest_unstable | UpdateSessionProjectRequest_unstable | RenameSessionRequest_unstable | ArchiveSessionRequest_unstable | UnarchiveSessionRequest_unstable | CreateSourceRequest_unstable | ListSourcesRequest_unstable | UpdateSourceRequest_unstable | DeleteSourceRequest_unstable | ExportSourceRequest_unstable | ImportSourcesRequest_unstable | DictationTranscribeRequest_unstable | DictationConfigRequest_unstable | DictationSecretSaveRequest_unstable | DictationSecretDeleteRequest_unstable | DictationModelsListRequest_unstable | DictationModelDownloadRequest_unstable | DictationModelDownloadProgressRequest_unstable | DictationModelCancelRequest_unstable | DictationModelDeleteRequest_unstable | DictationModelSelectRequest_unstable | {
         [key: string]: unknown;
     } | null;
 };
 
 export type ExtResponse = {
     id: string;
-    result?: EmptyResponse | GetToolsResponse_unstable | GooseToolCallResponse_unstable | ReadResourceResponse_unstable | GetExtensionsResponse_unstable | GetSessionExtensionsResponse_unstable | ListProvidersResponse_unstable | ProviderCatalogListResponse_unstable | ProviderSetupCatalogListResponse_unstable | ProviderCatalogTemplateResponse_unstable | CustomProviderCreateResponse_unstable | CustomProviderReadResponse_unstable | CustomProviderUpdateResponse_unstable | CustomProviderDeleteResponse_unstable | RefreshProviderInventoryResponse_unstable | ProviderConfigReadResponse_unstable | ProviderConfigStatusResponse_unstable | ProviderConfigChangeResponse_unstable | PreferencesReadResponse_unstable | DefaultsReadResponse_unstable | OnboardingImportScanResponse_unstable | OnboardingImportApplyResponse_unstable | ExportSessionResponse_unstable | ImportSessionResponse_unstable | CreateSourceResponse_unstable | ListSourcesResponse_unstable | UpdateSourceResponse_unstable | ExportSourceResponse_unstable | ImportSourcesResponse_unstable | DictationTranscribeResponse_unstable | DictationConfigResponse_unstable | DictationModelsListResponse_unstable | DictationModelDownloadProgressResponse_unstable | unknown;
+    result?: EmptyResponse | GetToolsResponse_unstable | GooseToolCallResponse_unstable | ReadResourceResponse_unstable | GetExtensionsResponse_unstable | GetSessionExtensionsResponse_unstable | ListProvidersResponse_unstable | ProviderSupportedModelsListResponse_unstable | ProviderCatalogListResponse_unstable | ProviderSetupCatalogListResponse_unstable | ProviderCatalogTemplateResponse_unstable | CustomProviderCreateResponse_unstable | CustomProviderReadResponse_unstable | CustomProviderUpdateResponse_unstable | CustomProviderDeleteResponse_unstable | RefreshProviderInventoryResponse_unstable | ProviderConfigReadResponse_unstable | ProviderConfigStatusResponse_unstable | ProviderConfigChangeResponse_unstable | PreferencesReadResponse_unstable | DefaultsReadResponse_unstable | OnboardingImportScanResponse_unstable | OnboardingImportApplyResponse_unstable | ExportSessionResponse_unstable | ImportSessionResponse_unstable | CreateSourceResponse_unstable | ListSourcesResponse_unstable | UpdateSourceResponse_unstable | ExportSourceResponse_unstable | ImportSourcesResponse_unstable | DictationTranscribeResponse_unstable | DictationConfigResponse_unstable | DictationModelsListResponse_unstable | DictationModelDownloadProgressResponse_unstable | unknown;
 } | {
     error: {
         code: number;
@@ -1150,11 +1105,4 @@ export type ExtResponse = {
         data?: unknown;
     };
     id: string;
-};
-
-export type ExtNotification = {
-    method: string;
-    params?: GooseSessionNotification_unstable | {
-        [key: string]: unknown;
-    } | null;
 };

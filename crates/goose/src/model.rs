@@ -451,17 +451,23 @@ impl ModelConfig {
         if !lower.contains("claude") {
             return false;
         }
-        // Match `claude-<family>-<major>` where major >= 4. Covers ids like
-        // `claude-opus-4-8`, `claude-sonnet-4-5`, `anthropic/claude-opus-4.6`,
-        // `databricks-claude-opus-4.5`, etc. Older Claude 3.x / 2.x ids keep
-        // the conservative 4096 default since their real output caps are
-        // genuinely small (3.x sonnet = 8192, 3.x opus = 4096).
+        // Match a major version >= 4 in either Claude id ordering:
+        //   family-first  — `claude-opus-4-8`, `claude-sonnet-4-5`,
+        //                    `anthropic/claude-opus-4.6`, `databricks-claude-opus-4.5`
+        //   version-first — `claude-4-sonnet`, `claude-4-opus`,
+        //                    `claude-4-5-sonnet` (Snowflake/Databricks naming)
+        // Older Claude 3.x / 2.x ids keep the conservative 4096 default since
+        // their real output caps are genuinely small (3.x sonnet = 8192,
+        // 3.x opus = 4096).
         static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
         let re = RE.get_or_init(|| {
-            regex::Regex::new(r"claude[-/](?:opus|sonnet|haiku)[-.]?(\d+)").unwrap()
+            regex::Regex::new(
+                r"claude[-/](?:(?:opus|sonnet|haiku)[-.]?(\d+)|(\d+)(?:[-.]\d+)*[-.](?:opus|sonnet|haiku))",
+            )
+            .unwrap()
         });
         re.captures(&lower)
-            .and_then(|c| c.get(1))
+            .and_then(|c| c.get(1).or_else(|| c.get(2)))
             .and_then(|m| m.as_str().parse::<u32>().ok())
             .map(|major| major >= 4)
             .unwrap_or(false)
@@ -618,6 +624,12 @@ mod tests {
             "claude-haiku-4-2",
             "anthropic/claude-opus-4.8",
             "databricks-claude-opus-4.6",
+            // version-first ordering (Snowflake/Databricks)
+            "claude-4-sonnet",
+            "claude-4-opus",
+            "claude-4-5-sonnet",
+            "databricks-claude-4-sonnet",
+            "goose-claude-4-sonnet-bedrock",
         ] {
             let cfg = ModelConfig {
                 model_name: model.to_string(),
@@ -645,6 +657,9 @@ mod tests {
         for model in [
             "claude-3-opus-20240229",
             "claude-3-5-sonnet-20241022",
+            // version-first 3.x must stay on the conservative default
+            "claude-3-sonnet",
+            "claude-3-5-sonnet",
             "gpt-4o",
             "some-unknown-model",
         ] {

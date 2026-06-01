@@ -1,5 +1,31 @@
 use super::*;
 
+fn replay_audience_annotations(audience: &[Role]) -> Annotations {
+    Annotations::new().audience(
+        audience
+            .iter()
+            .map(|role| match role {
+                Role::Assistant => agent_client_protocol::schema::Role::Assistant,
+                Role::User => agent_client_protocol::schema::Role::User,
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
+fn send_replay_content_chunk(
+    cx: &ConnectionTo<Client>,
+    session_id: &SessionId,
+    message: &Message,
+    content: ContentBlock,
+) -> std::result::Result<(), agent_client_protocol::Error> {
+    let chunk = ContentChunk::new(content).meta(replay_message_meta(message));
+    let update = match message.role {
+        Role::User => SessionUpdate::UserMessageChunk(chunk),
+        Role::Assistant => SessionUpdate::AgentMessageChunk(chunk),
+    };
+    cx.send_notification(SessionNotification::new(session_id.clone(), update))
+}
+
 fn replay_conversation_to_client(
     cx: &ConnectionTo<Client>,
     session: &Session,
@@ -34,39 +60,23 @@ fn replay_conversation_to_client(
                 MessageContent::Text(text) => {
                     let mut tc = TextContent::new(text.text.clone());
                     if let Some(audience) = text.audience() {
-                        tc = tc.annotations(
-                            Annotations::new().audience(
-                                audience
-                                    .iter()
-                                    .map(|r| match r {
-                                        Role::Assistant => {
-                                            agent_client_protocol::schema::Role::Assistant
-                                        }
-                                        Role::User => agent_client_protocol::schema::Role::User,
-                                    })
-                                    .collect::<Vec<_>>(),
-                            ),
-                        );
+                        tc = tc.annotations(replay_audience_annotations(audience));
                     }
-                    let chunk = ContentChunk::new(ContentBlock::Text(tc))
-                        .meta(replay_message_meta(message));
-                    let update = match message.role {
-                        Role::User => SessionUpdate::UserMessageChunk(chunk),
-                        Role::Assistant => SessionUpdate::AgentMessageChunk(chunk),
-                    };
-                    cx.send_notification(SessionNotification::new(session_id.clone(), update))?;
+                    send_replay_content_chunk(cx, &session_id, message, ContentBlock::Text(tc))?;
                 }
                 MessageContent::Image(image) => {
-                    let chunk = ContentChunk::new(ContentBlock::Image(ImageContent::new(
-                        image.data.clone(),
-                        image.mime_type.clone(),
-                    )))
-                    .meta(replay_message_meta(message));
-                    let update = match message.role {
-                        Role::User => SessionUpdate::UserMessageChunk(chunk),
-                        Role::Assistant => SessionUpdate::AgentMessageChunk(chunk),
-                    };
-                    cx.send_notification(SessionNotification::new(session_id.clone(), update))?;
+                    let mut image_content =
+                        ImageContent::new(image.data.clone(), image.mime_type.clone());
+                    if let Some(audience) = image.audience() {
+                        image_content =
+                            image_content.annotations(replay_audience_annotations(audience));
+                    }
+                    send_replay_content_chunk(
+                        cx,
+                        &session_id,
+                        message,
+                        ContentBlock::Image(image_content),
+                    )?;
                 }
                 MessageContent::ToolRequest(tool_request) => {
                     replay_tool_requests.insert(tool_request.id.clone(), tool_request.clone());

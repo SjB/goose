@@ -16,18 +16,21 @@ use fs_err as fs;
 use goose::acp::server::AcpProviderFactory;
 use goose::config::base::CONFIG_YAML_NAME;
 use goose::config::GooseMode;
-use goose::conversation::message::Message;
-use goose::model::ModelConfig;
-use goose::providers::base::{
-    stream_from_single_message, MessageStream, Provider, ProviderUsage, Usage,
-};
-use goose::providers::errors::ProviderError;
 use goose_test_support::{McpFixture, FAKE_CODE, TEST_IMAGE_B64, TEST_MODEL};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use std::time::Duration;
 
 const SHELL_TEST_CONTENT: &str = "test-shell-content-98765";
+const OPENAI_SESSION_NAME_RESPONSE: &str = r#"data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1766229303,"model":"gpt-5-nano","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1766229303,"model":"gpt-5-nano","choices":[{"index":0,"delta":{"content":"Generated Test Title"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1766229303,"model":"gpt-5-nano","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1766229303,"model":"gpt-5-nano","choices":[],"usage":{"prompt_tokens":100,"completion_tokens":10,"total_tokens":110}}
+
+data: [DONE]"#;
 
 struct BasicSession<C: Connection> {
     conn: C,
@@ -56,46 +59,6 @@ async fn new_basic_session<C: Connection>(config: TestConnectionConfig) -> Basic
     assert_eq!(output.text, "2");
 
     BasicSession { conn, session }
-}
-
-struct NamingProvider {
-    model_config: ModelConfig,
-}
-
-#[async_trait::async_trait]
-impl Provider for NamingProvider {
-    fn get_name(&self) -> &str {
-        "naming-test"
-    }
-
-    async fn stream(
-        &self,
-        _model_config: &ModelConfig,
-        _session_id: &str,
-        system: &str,
-        _messages: &[Message],
-        _tools: &[rmcp::model::Tool],
-    ) -> Result<MessageStream, ProviderError> {
-        let text = if system.contains("four words or less") || system.contains("4 words or less") {
-            "Generated Test Title"
-        } else {
-            "2"
-        };
-        Ok(stream_from_single_message(
-            Message::assistant().with_text(text),
-            ProviderUsage::new(self.model_config.model_name.clone(), Usage::default()),
-        ))
-    }
-
-    fn get_model_config(&self) -> ModelConfig {
-        self.model_config.clone()
-    }
-}
-
-fn naming_provider_factory() -> AcpProviderFactory {
-    Arc::new(|_provider_name, model_config, _extensions, _working_dir| {
-        Box::pin(async move { Ok(Arc::new(NamingProvider { model_config }) as Arc<dyn Provider>) })
-    })
 }
 
 pub async fn run_list_sessions<C: Connection>() {
@@ -133,9 +96,21 @@ pub async fn run_list_sessions<C: Connection>() {
 
 pub async fn run_session_name_update_notification<C: Connection>() {
     let expected_session_id = C::expected_session_id();
-    let openai = OpenAiFixture::new(vec![], expected_session_id.clone()).await;
+    let openai = OpenAiFixture::new(
+        vec![
+            (
+                r#"</info-msg>\nwhat should we call this conversation?""#.into(),
+                include_str!("../acp_test_data/openai_basic.txt"),
+            ),
+            (
+                "Generate a short title for the above messages.".into(),
+                OPENAI_SESSION_NAME_RESPONSE,
+            ),
+        ],
+        expected_session_id.clone(),
+    )
+    .await;
     let config = TestConnectionConfig {
-        provider_factory: Some(naming_provider_factory()),
         disable_session_naming: false,
         ..Default::default()
     };
@@ -943,8 +918,10 @@ pub async fn run_new_session_uses_current_config_mode<C: Connection>() {
 
     let mut conn = C::new(config, openai).await;
 
+    let global_config_path =
+        goose::config::paths::Paths::config_dir().join(goose::config::base::CONFIG_YAML_NAME);
     fs::write(
-        &config_path,
+        &global_config_path,
         format!("GOOSE_MODEL: {TEST_MODEL}\nGOOSE_PROVIDER: openai\nGOOSE_MODE: auto\n"),
     )
     .unwrap();
@@ -1360,11 +1337,11 @@ pub async fn run_prompt_model_mismatch<C: Connection>() {
     // TODO: add a Responses API mock to OpenAiFixture so we can test with
     // responses-routed models like o4-mini here.
     let config = TestConnectionConfig {
-        current_model: "gpt-4.1".to_string(),
+        current_model: "gpt-4o".to_string(),
         ..Default::default()
     };
 
-    // Server starts on gpt-4.1; client is configured with TEST_MODEL.
+    // Server starts on gpt-4o; client is configured with TEST_MODEL.
     // If session_model is seeded from the response, stream() detects the
     // mismatch and sends set_model(TEST_MODEL) before prompting.
     let BasicSession { conn: _, .. } = new_basic_session::<C>(config).await;

@@ -11,9 +11,11 @@ use unicode_normalization::UnicodeNormalization;
 pub mod canonical;
 pub mod conversation;
 pub mod model;
+pub mod usage;
 
 pub use conversation::Conversation;
 pub use model::{Config, ConfigError, ConfigParamError, EnvConfig, ModelConfig, ThinkingEffort};
+pub use usage::{ProviderUsage, Usage};
 
 pub type ToolResult<T> = Result<T, ErrorData>;
 

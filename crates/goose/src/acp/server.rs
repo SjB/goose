@@ -71,6 +71,7 @@ use tokio_util::compat::{TokioAsyncReadCompatExt as _, TokioAsyncWriteCompatExt 
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use url::Url;
+use uuid::Uuid;
 
 mod config;
 mod custom_dispatch;
@@ -176,6 +177,7 @@ struct GooseAcpSession {
     /// Idempotence guard so we summarize each chain at most once.
     summarized_chains: HashSet<String>,
     cancel_token: Option<CancellationToken>,
+    active_run_id: Option<String>,
     /// Working directory set while the agent was still loading.
     /// Applied once the agent becomes ready.
     pending_working_dir: Option<std::path::PathBuf>,
@@ -2624,6 +2626,7 @@ impl GooseAcpAgent {
             responded_tool_ids: HashSet::new(),
             summarized_chains: HashSet::new(),
             cancel_token: None,
+            active_run_id: None,
             pending_working_dir: None,
         };
         self.sessions
@@ -2760,6 +2763,92 @@ impl GooseAcpAgent {
             },
             Err(e) => Err(agent_client_protocol::Error::internal_error().data(e.clone())),
         }
+    }
+
+    async fn start_active_run(
+        &self,
+        session_id: &str,
+        run_id: String,
+        cancel_token: CancellationToken,
+    ) -> Result<(), agent_client_protocol::Error> {
+        let mut sessions = self.sessions.lock().await;
+        let session = sessions.get_mut(session_id).ok_or_else(|| {
+            agent_client_protocol::Error::resource_not_found(Some(session_id.to_string()))
+                .data(format!("Session not found: {}", session_id))
+        })?;
+
+        if let Some(active_run_id) = &session.active_run_id {
+            return Err(agent_client_protocol::Error::invalid_params().data(format!(
+                "session already has active run `{active_run_id}`; use _goose/unstable/session/steer"
+            )));
+        }
+
+        session.cancel_token = Some(cancel_token);
+        session.active_run_id = Some(run_id);
+        Ok(())
+    }
+
+    async fn clear_active_run(&self, session_id: &str, run_id: &str) {
+        let mut sessions = self.sessions.lock().await;
+        if let Some(session) = sessions.get_mut(session_id) {
+            if session.active_run_id.as_deref() == Some(run_id) {
+                session.cancel_token = None;
+                session.active_run_id = None;
+            }
+        }
+    }
+
+    async fn require_active_run(
+        &self,
+        session_id: &str,
+        expected_run_id: &str,
+    ) -> Result<String, agent_client_protocol::Error> {
+        if expected_run_id.is_empty() {
+            return Err(agent_client_protocol::Error::invalid_params()
+                .data("expectedRunId must not be empty"));
+        }
+
+        let sessions = self.sessions.lock().await;
+        let session = sessions.get(session_id).ok_or_else(|| {
+            agent_client_protocol::Error::resource_not_found(Some(session_id.to_string()))
+                .data(format!("Session not found: {}", session_id))
+        })?;
+        let active_run_id = session.active_run_id.as_ref().ok_or_else(|| {
+            agent_client_protocol::Error::invalid_params().data("no active run to steer")
+        })?;
+        if active_run_id != expected_run_id {
+            return Err(agent_client_protocol::Error::invalid_params().data(format!(
+                "expected active run id `{expected_run_id}` but found `{active_run_id}`"
+            )));
+        }
+        Ok(active_run_id.clone())
+    }
+
+    fn active_run_meta(active_run_id: Option<&str>) -> Meta {
+        let mut goose = serde_json::Map::new();
+        goose.insert(
+            "activeRunId".to_string(),
+            active_run_id
+                .map(|run_id| serde_json::Value::String(run_id.to_string()))
+                .unwrap_or(serde_json::Value::Null),
+        );
+
+        let mut meta = serde_json::Map::new();
+        meta.insert("goose".to_string(), serde_json::Value::Object(goose));
+        meta
+    }
+
+    fn send_active_run_update(
+        cx: &ConnectionTo<Client>,
+        session_id: &SessionId,
+        active_run_id: Option<&str>,
+    ) -> Result<(), agent_client_protocol::Error> {
+        cx.send_notification(SessionNotification::new(
+            session_id.clone(),
+            SessionUpdate::SessionInfoUpdate(
+                SessionInfoUpdate::new().meta(Self::active_run_meta(active_run_id)),
+            ),
+        ))
     }
 
     async fn add_mcp_extensions(
@@ -2990,6 +3079,7 @@ impl GooseAcpAgent {
             responded_tool_ids: HashSet::new(),
             summarized_chains: HashSet::new(),
             cancel_token: None,
+            active_run_id: None,
             pending_working_dir: None,
         };
         self.sessions
@@ -3059,10 +3149,23 @@ impl GooseAcpAgent {
         let sid = sid_short(&session_id);
         let t_start = std::time::Instant::now();
 
+        let run_id = format!("run_{}", Uuid::new_v4());
         let cancel_token = CancellationToken::new();
-        let agent = self
-            .get_session_agent(&session_id, Some(cancel_token.clone()))
+        self.start_active_run(&session_id, run_id.clone(), cancel_token.clone())
             .await?;
+        if let Err(error) = Self::send_active_run_update(cx, &args.session_id, Some(&run_id)) {
+            self.clear_active_run(&session_id, &run_id).await;
+            return Err(error);
+        }
+
+        let agent = match self.get_session_agent(&session_id, None).await {
+            Ok(agent) => agent,
+            Err(error) => {
+                self.clear_active_run(&session_id, &run_id).await;
+                let _ = Self::send_active_run_update(cx, &args.session_id, None);
+                return Err(error);
+            }
+        };
 
         let user_message = Self::convert_acp_prompt_to_message(&args.prompt);
 
@@ -3077,7 +3180,7 @@ impl GooseAcpAgent {
                     )
                 {
                     if recipe_path.exists() {
-                        cx.send_notification(SessionNotification::new(
+                        if let Err(error) = cx.send_notification(SessionNotification::new(
                             args.session_id.clone(),
                             SessionUpdate::AgentMessageChunk(ContentChunk::new(
                                 ContentBlock::Text(TextContent::new(format!(
@@ -3085,7 +3188,11 @@ impl GooseAcpAgent {
                                     full_command
                                 ))),
                             )),
-                        ))?;
+                        )) {
+                            self.clear_active_run(&session_id, &run_id).await;
+                            let _ = Self::send_active_run_update(cx, &args.session_id, None);
+                            return Err(error);
+                        }
                     }
                 }
             }
@@ -3098,10 +3205,18 @@ impl GooseAcpAgent {
             retry_config: None,
         };
 
-        let mut stream = agent
+        let mut stream = match agent
             .reply(user_message, session_config, Some(cancel_token.clone()))
             .await
-            .internal_err_ctx("Error getting agent reply")?;
+        {
+            Ok(stream) => stream,
+            Err(error) => {
+                self.clear_active_run(&session_id, &run_id).await;
+                let _ = Self::send_active_run_update(cx, &args.session_id, None);
+                return Err(agent_client_protocol::Error::internal_error()
+                    .data(format!("Error getting agent reply: {error}")));
+            }
+        };
 
         let mut was_cancelled = false;
         let mut first_event_logged = false;
@@ -3117,6 +3232,7 @@ impl GooseAcpAgent {
         // `handle_tool_response` finds the chain when subsequent responses
         // are processed.
         let mut chain_buffer: Vec<(String, String)> = Vec::new();
+        let mut stream_error = None;
 
         while let Some(event) = stream.next().await {
             if cancel_token.is_cancelled() {
@@ -3140,10 +3256,13 @@ impl GooseAcpAgent {
                     let stored_message_id = message.id.clone();
 
                     let mut sessions = self.sessions.lock().await;
-                    let session = sessions.get_mut(&session_id).ok_or_else(|| {
-                        agent_client_protocol::Error::invalid_params()
-                            .data(format!("Session not found: {}", session_id))
-                    })?;
+                    let Some(session) = sessions.get_mut(&session_id) else {
+                        stream_error = Some(
+                            agent_client_protocol::Error::invalid_params()
+                                .data(format!("Session not found: {}", session_id)),
+                        );
+                        break;
+                    };
 
                     for content_item in &message.content {
                         match content_item {
@@ -3173,22 +3292,33 @@ impl GooseAcpAgent {
                             }
                         }
 
-                        self.handle_message_content(
-                            content_item,
-                            &args.session_id,
-                            &session_id,
-                            stored_message_id.as_deref(),
-                            &agent,
-                            session,
-                            cx,
-                        )
-                        .await?;
+                        if let Err(error) = self
+                            .handle_message_content(
+                                content_item,
+                                &args.session_id,
+                                &session_id,
+                                stored_message_id.as_deref(),
+                                &agent,
+                                session,
+                                cx,
+                            )
+                            .await
+                        {
+                            stream_error = Some(error);
+                            break;
+                        }
+                    }
+                    if stream_error.is_some() {
+                        break;
                     }
                 }
                 Ok(_) => {}
                 Err(e) => {
-                    return Err(agent_client_protocol::Error::internal_error()
-                        .data(format!("Error in agent response stream: {}", e)));
+                    stream_error = Some(
+                        agent_client_protocol::Error::internal_error()
+                            .data(format!("Error in agent response stream: {}", e)),
+                    );
+                    break;
                 }
             }
         }
@@ -3201,8 +3331,12 @@ impl GooseAcpAgent {
                 // registered. (Eager registration during the loop usually
                 // covers this.)
                 extend_chain_membership(&chain_buffer, &mut session.chain_membership);
-                session.cancel_token = None;
             }
+        }
+        self.clear_active_run(&session_id, &run_id).await;
+        Self::send_active_run_update(cx, &args.session_id, None)?;
+        if let Some(error) = stream_error {
+            return Err(error);
         }
 
         let session = self
@@ -3240,6 +3374,35 @@ impl GooseAcpAgent {
             response = response.usage(usage);
         }
         Ok(response)
+    }
+
+    async fn on_steer_session(
+        &self,
+        req: SteerSessionRequest,
+    ) -> Result<SteerSessionResponse, agent_client_protocol::Error> {
+        if req.prompt.is_empty() {
+            return Err(
+                agent_client_protocol::Error::invalid_params().data("prompt must not be empty")
+            );
+        }
+
+        self.require_active_run(&req.session_id, &req.expected_run_id)
+            .await?;
+        let agent = self.get_session_agent(&req.session_id, None).await?;
+        let active_run_id = self
+            .require_active_run(&req.session_id, &req.expected_run_id)
+            .await?;
+
+        let message = Self::convert_acp_prompt_to_message(&req.prompt);
+        if message.content.is_empty() {
+            return Err(agent_client_protocol::Error::invalid_params()
+                .data("prompt must contain steerable content"));
+        }
+        agent.steer(&req.session_id, message).await;
+
+        Ok(SteerSessionResponse {
+            run_id: active_run_id,
+        })
     }
 
     async fn on_cancel(
@@ -3560,6 +3723,7 @@ impl GooseAcpAgent {
             responded_tool_ids: HashSet::new(),
             summarized_chains: HashSet::new(),
             cancel_token: None,
+            active_run_id: None,
             pending_working_dir: None,
         };
         self.sessions

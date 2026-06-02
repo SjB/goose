@@ -92,6 +92,8 @@ import type {
   RemoveExtensionRequest_unstable,
   RenameSessionRequest_unstable,
   SetSessionSystemPromptRequest_unstable,
+  SteerSessionRequest_unstable,
+  SteerSessionResponse_unstable,
   ToggleConfigExtensionRequest_unstable,
   UnarchiveSessionRequest_unstable,
   UpdateSessionProjectRequest_unstable,
@@ -132,6 +134,7 @@ import {
   zProviderSupportedModelsListResponse_unstable,
   zReadResourceResponse_unstable,
   zRefreshProviderInventoryResponse_unstable,
+  zSteerSessionResponse_unstable,
   zUpdateSourceResponse_unstable,
 } from './zod.gen.js';
 
@@ -197,6 +200,18 @@ export class GooseExtClient {
       "_goose/unstable/session/system-prompt/set",
       params,
     );
+  }
+
+  async sessionSteer_unstable(
+    params: SteerSessionRequest_unstable,
+  ): Promise<SteerSessionResponse_unstable> {
+    const raw = await this.conn.extMethod(
+      "_goose/unstable/session/steer",
+      params,
+    );
+    return zSteerSessionResponse_unstable.parse(
+      raw,
+    ) as SteerSessionResponse_unstable;
   }
 
   async sessionDelete(params: DeleteSessionRequest): Promise<void> {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -246,6 +246,7 @@ pub struct Agent {
     container: Mutex<Option<Container>>,
     goal: Mutex<Option<String>>,
     grind: Mutex<Option<String>>,
+    pending_steers: Mutex<HashMap<String, VecDeque<Message>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -367,6 +368,7 @@ impl Agent {
             container: Mutex::new(None),
             goal: Mutex::new(None),
             grind: Mutex::new(None),
+            pending_steers: Mutex::new(HashMap::new()),
         }
     }
 
@@ -400,6 +402,32 @@ impl Agent {
         self.hook_manager
             .emit(event, crate::hooks::HookContext::new(event, session_id))
             .await;
+    }
+
+    pub async fn steer(&self, session_id: &str, message: Message) {
+        self.pending_steers
+            .lock()
+            .await
+            .entry(session_id.to_string())
+            .or_default()
+            .push_back(message);
+    }
+
+    async fn has_pending_steers(&self, session_id: &str) -> bool {
+        self.pending_steers
+            .lock()
+            .await
+            .get(session_id)
+            .is_some_and(|messages| !messages.is_empty())
+    }
+
+    async fn drain_pending_steers(&self, session_id: &str) -> Vec<Message> {
+        self.pending_steers
+            .lock()
+            .await
+            .remove(session_id)
+            .map(|messages| messages.into_iter().collect())
+            .unwrap_or_default()
     }
 
     async fn emit_pre_tool_extended_hooks(
@@ -1702,10 +1730,33 @@ impl Agent {
             let mut retrying_after_stop_hook_denial = false;
             let mut consecutive_stop_hook_blocks = 0u32;
             let stop_hook_block_cap = self.stop_hook_block_cap();
+            let mut can_drain_pending_steers = false;
 
             loop {
                 if is_token_cancelled(&cancel_token) {
                     break;
+                }
+
+                if can_drain_pending_steers {
+                    for message in self.drain_pending_steers(&session_config.id).await {
+                        let message_text = message.as_concat_text();
+                        if self
+                            .hook_manager
+                            .has_hooks(crate::hooks::HookEvent::UserPromptSubmit)
+                        {
+                            let ctx = crate::hooks::HookContext::new(
+                                crate::hooks::HookEvent::UserPromptSubmit,
+                                &session_config.id,
+                            )
+                            .with_message(message_text);
+                            self.hook_manager
+                                .emit(crate::hooks::HookEvent::UserPromptSubmit, ctx)
+                                .await;
+                        }
+                        session_manager.add_message(&session_config.id, &message).await?;
+                        conversation.push(message.clone());
+                        yield AgentEvent::Message(message);
+                    }
                 }
 
                 let final_output = {
@@ -2212,6 +2263,8 @@ impl Agent {
                         }
                     }
                 }
+                can_drain_pending_steers = true;
+
                 if tools_updated {
                     (tools, toolshim_tools, system_prompt) =
                         self.prepare_tools_and_prompt(&session_config.id, &session.working_dir).await?;
@@ -2251,6 +2304,7 @@ impl Agent {
                         None if did_recovery_compact_this_iteration => {
                             // continue from last user message after recovery compact
                         }
+                        None if self.has_pending_steers(&session_config.id).await => {}
                         None if self.goal.lock().await.is_some() && !goal_check_pending => {
                             goal_check_pending = true;
                             let goal = self.goal.lock().await.clone().unwrap();
@@ -2373,6 +2427,10 @@ impl Agent {
                     session_manager.add_message(&session_config.id, msg).await?;
                 }
                 conversation.extend(messages_to_add);
+
+                if exit_chat && self.has_pending_steers(&session_config.id).await {
+                    exit_chat = false;
+                }
 
                 if exit_chat {
                     let ctx = crate::hooks::HookContext::new(

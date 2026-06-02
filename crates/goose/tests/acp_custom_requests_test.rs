@@ -2,18 +2,24 @@
 #[path = "acp_common_tests/mod.rs"]
 mod common_tests;
 
+use agent_client_protocol::schema::{
+    ContentBlock, PromptRequest, SessionUpdate, StopReason, TextContent,
+};
 use common_tests::fixtures::server::AcpServerConnection;
 use common_tests::fixtures::{
     run_test, send_custom, Connection, PermissionDecision, Session, SessionData,
     TestConnectionConfig,
 };
 use goose::acp::server::AcpProviderFactory;
+use goose::conversation::message::Message;
 use goose::model::ModelConfig;
-use goose::providers::base::{MessageStream, Provider};
+use goose::providers::base::{MessageStream, Provider, ProviderUsage, Usage};
 use goose::providers::errors::ProviderError;
 use goose_test_support::{EnforceSessionId, IgnoreSessionId};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use common_tests::fixtures::OpenAiFixture;
 
@@ -74,6 +80,87 @@ fn mock_provider_factory() -> AcpProviderFactory {
     })
 }
 
+struct SteeringProvider {
+    model_config: ModelConfig,
+    call_count: AtomicUsize,
+}
+
+#[async_trait::async_trait]
+impl Provider for SteeringProvider {
+    fn get_name(&self) -> &str {
+        "steering-test"
+    }
+
+    async fn stream(
+        &self,
+        _model_config: &ModelConfig,
+        _session_id: &str,
+        _system: &str,
+        messages: &[Message],
+        _tools: &[rmcp::model::Tool],
+    ) -> Result<MessageStream, ProviderError> {
+        let call = self.call_count.fetch_add(1, Ordering::SeqCst);
+        let usage = ProviderUsage::new(self.model_config.model_name.clone(), Usage::default());
+        let saw_steer = messages
+            .iter()
+            .any(|message| message.as_concat_text().contains("steer while active"));
+
+        let text = match (call, saw_steer) {
+            (0, _) => {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                "first response"
+            }
+            (_, true) => "saw steer",
+            _ => "missing steer",
+        };
+
+        let message = Message::assistant().with_text(text);
+        Ok(Box::pin(futures::stream::once(async move {
+            Ok((Some(message), Some(usage)))
+        })))
+    }
+
+    fn get_model_config(&self) -> ModelConfig {
+        self.model_config.clone()
+    }
+}
+
+fn steering_provider_factory() -> AcpProviderFactory {
+    Arc::new(|_provider_name, model_config, _extensions, _working_dir| {
+        Box::pin(async move {
+            Ok(Arc::new(SteeringProvider {
+                model_config,
+                call_count: AtomicUsize::new(0),
+            }) as Arc<dyn Provider>)
+        })
+    })
+}
+
+fn active_run_id_from_update(update: &SessionUpdate) -> Option<String> {
+    let SessionUpdate::SessionInfoUpdate(info) = update else {
+        return None;
+    };
+    info.meta
+        .as_ref()?
+        .get("goose")?
+        .get("activeRunId")?
+        .as_str()
+        .map(ToString::to_string)
+}
+
+fn collect_agent_text(updates: &[SessionUpdate]) -> String {
+    updates
+        .iter()
+        .filter_map(|update| match update {
+            SessionUpdate::AgentMessageChunk(chunk) => match &chunk.content {
+                ContentBlock::Text(text) => Some(text.text.as_str()),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
 fn test_custom_get_tools() {
     run_test(async move {
@@ -119,6 +206,76 @@ fn test_custom_get_extensions() {
         assert!(
             response.get("warnings").is_some(),
             "missing 'warnings' field"
+        );
+    });
+}
+
+#[test]
+fn test_steer_session_adds_input_to_active_prompt() {
+    run_test(async move {
+        let openai = OpenAiFixture::new(vec![], Arc::new(EnforceSessionId::default())).await;
+        let mut conn = AcpServerConnection::new(
+            TestConnectionConfig {
+                provider_factory: Some(steering_provider_factory()),
+                ..Default::default()
+            },
+            openai,
+        )
+        .await;
+
+        let SessionData { session, .. } = conn.new_session().await.unwrap();
+        let session_id = session.session_id().0.to_string();
+        let acp_session_id = session.session_id().clone();
+
+        let mut prompt = Box::pin(
+            conn.cx()
+                .send_request(PromptRequest::new(
+                    acp_session_id,
+                    vec![ContentBlock::Text(TextContent::new("start work"))],
+                ))
+                .block_task(),
+        );
+        let mut steer_sent = false;
+        let mut final_response = None;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+
+        while tokio::time::Instant::now() < deadline {
+            tokio::select! {
+                response = &mut prompt => {
+                    final_response = Some(response.unwrap());
+                    break;
+                }
+                _ = tokio::time::sleep(Duration::from_millis(10)), if !steer_sent => {
+                    let updates = session.session_updates();
+                    if let Some(run_id) = updates.iter().find_map(active_run_id_from_update) {
+                        let response = send_custom(
+                            conn.cx(),
+                            "_goose/unstable/session/steer",
+                            serde_json::json!({
+                                "sessionId": session_id,
+                                "expectedRunId": run_id,
+                                "prompt": [
+                                    { "type": "text", "text": "steer while active" }
+                                ]
+                            }),
+                        )
+                        .await
+                        .unwrap();
+                        assert_eq!(response["runId"], run_id);
+                        steer_sent = true;
+                    }
+                }
+            }
+        }
+
+        let response = final_response.expect("prompt did not complete");
+        assert_eq!(response.stop_reason, StopReason::EndTurn);
+        assert!(steer_sent, "test never observed an active run id");
+
+        let agent_text = collect_agent_text(&session.session_updates());
+        assert!(
+            agent_text.contains("saw steer"),
+            "expected provider to receive steered input, got: {agent_text:?}"
         );
     });
 }

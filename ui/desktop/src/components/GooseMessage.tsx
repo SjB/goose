@@ -147,6 +147,11 @@ export default function GooseMessage({
                 {!isStreaming && (
                   <div className="text-xs font-mono text-text-secondary pt-1 transition-all duration-200 group-hover:-translate-y-4 group-hover:opacity-0">
                     {timestamp}
+                    {message.metadata?.inference?.resolvedModel && (
+                      <span className="ml-2 opacity-70">
+                        @ {message.metadata.inference.resolvedModel}
+                      </span>
+                    )}
                   </div>
                 )}
                 {message.content.every((content) => content.type === 'text') && !isStreaming && (

@@ -1595,9 +1595,7 @@ impl Agent {
         let route_decision = self
             .complexity_router
             .as_ref()
-            .and_then(|router| {
-                super::complexity_router::route(router.as_ref(), &conversation)
-            });
+            .and_then(|router| super::complexity_router::route(router.as_ref(), &conversation));
 
         // Decide once per `reply_internal` call which model config to use.
         // If the complexity router says "use_fast" and the provider has a

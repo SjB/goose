@@ -1,4 +1,4 @@
-//! Parity test for the complexity model. Loads `~/.goose/complexity_router/`
+//! Parity test for the complexity model. Loads `~/.goose/complexity_model/`
 //! and `parity_fixture.jsonl` produced by `dump_parity_fixture.py`, then
 //! asserts the Rust pipeline matches Python within tolerance on every row.
 //!
@@ -25,7 +25,7 @@ fn bundle_dir() -> PathBuf {
     dirs::home_dir()
         .expect("home dir")
         .join(".goose")
-        .join("complexity_router")
+        .join("complexity_model")
 }
 
 #[test]

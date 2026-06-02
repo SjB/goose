@@ -13,7 +13,7 @@
 //! the bundle is produced by `train_complexity.py`.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -22,10 +22,10 @@ use ort::session::Session;
 use ort::value::TensorRef;
 use safetensors::SafeTensors;
 use serde::Deserialize;
-use tokenizers::Tokenizer;
+use tokenizers::{Tokenizer, TruncationDirection, TruncationParams, TruncationStrategy};
 
-use crate::conversation::message::{Message, Role};
 use crate::conversation::Conversation;
+use rmcp::model::Role;
 
 const DEFAULT_BUNDLE_SUBDIR: &str = "complexity_model";
 const MAX_SEQ_LEN: usize = 512;
@@ -34,7 +34,7 @@ const ANCHOR_MARKER: &str = ">>>";
 /// Complexity threshold under which the agent routes the turn to the fast model.
 /// Same dial we used at training time; tuned empirically by eyeballing the
 /// WildChat distribution. Demo-friendly default.
-pub const FAST_MODEL_THRESHOLD: f32 = 0.5;
+pub const FAST_MODEL_THRESHOLD: f32 = 0.30;
 
 #[derive(Debug, Deserialize)]
 struct BundleConfig {
@@ -90,7 +90,7 @@ pub struct ComplexityModel {
 struct Inner {
     embedder_dim: usize,
     tokenizer: Tokenizer,
-    session: Session,
+    session: Mutex<Session>,
     head: Vec<LinearLayer>,
     head_out_dim: usize,
     repo_id: String,
@@ -103,12 +103,29 @@ impl ComplexityModel {
     pub fn try_load_default() -> Option<Self> {
         let dir = default_bundle_dir()?;
         if !dir.join("config.json").exists() {
+            tracing::info!(
+                target: "goose::complexity_router",
+                path = %dir.display(),
+                "no complexity model bundle at default path; routing disabled",
+            );
             return None;
         }
         match Self::load_from_dir(&dir) {
-            Ok(m) => Some(m),
+            Ok(m) => {
+                tracing::info!(
+                    target: "goose::complexity_router",
+                    path = %dir.display(),
+                    "complexity model loaded",
+                );
+                Some(m)
+            }
             Err(e) => {
-                tracing::warn!("failed to load complexity model from {:?}: {:#}", dir, e);
+                tracing::warn!(
+                    target: "goose::complexity_router",
+                    path = %dir.display(),
+                    error = %format!("{:#}", e),
+                    "failed to load complexity model",
+                );
                 None
             }
         }
@@ -131,10 +148,33 @@ impl ComplexityModel {
                 cfg.embedder.output_dim
             );
         }
+        if !cfg.head.activation.is_empty() && cfg.head.activation != "relu" {
+            bail!(
+                "unsupported head activation {:?} (only \"relu\" is implemented)",
+                cfg.head.activation
+            );
+        }
+        if !cfg.head.output_activation.is_empty() && cfg.head.output_activation != "sigmoid" {
+            bail!(
+                "unsupported head output_activation {:?} (only \"sigmoid\" is implemented)",
+                cfg.head.output_activation
+            );
+        }
 
         let tokenizer_path = dir.join(&cfg.embedder.tokenizer_file);
-        let tokenizer = Tokenizer::from_file(&tokenizer_path)
+        let mut tokenizer = Tokenizer::from_file(&tokenizer_path)
             .map_err(|e| anyhow!("loading tokenizer at {}: {}", tokenizer_path.display(), e))?;
+        // Match fastembed: enforce truncation at the tokenizer (so special tokens
+        // are placed correctly when the input overflows). `from_file` does not
+        // auto-apply the `truncation` block from tokenizer.json.
+        tokenizer
+            .with_truncation(Some(TruncationParams {
+                direction: TruncationDirection::Right,
+                max_length: MAX_SEQ_LEN,
+                strategy: TruncationStrategy::LongestFirst,
+                stride: 0,
+            }))
+            .map_err(|e| anyhow!("enable truncation: {}", e))?;
 
         let onnx_path = dir.join(&cfg.embedder.onnx_file);
         let session = Session::builder()?
@@ -150,7 +190,7 @@ impl ComplexityModel {
             inner: Arc::new(Inner {
                 embedder_dim: cfg.embedder.output_dim,
                 tokenizer,
-                session,
+                session: Mutex::new(session),
                 head,
                 head_out_dim: cfg.head.output_dim,
                 repo_id: cfg.embedder.repo_id,
@@ -201,31 +241,29 @@ impl ComplexityModel {
             .tokenizer
             .encode(text, true)
             .map_err(|e| anyhow!("tokenize: {}", e))?;
-        let mut ids: Vec<i64> = encoding.get_ids().iter().map(|&x| x as i64).collect();
-        let mut mask: Vec<i64> = encoding
+        let ids: Vec<i64> = encoding.get_ids().iter().map(|&x| x as i64).collect();
+        let mask: Vec<i64> = encoding
             .get_attention_mask()
             .iter()
             .map(|&x| x as i64)
             .collect();
-        if ids.len() > MAX_SEQ_LEN {
-            ids.truncate(MAX_SEQ_LEN);
-            mask.truncate(MAX_SEQ_LEN);
-        }
         let seq_len = ids.len();
         let ids_arr = Array2::from_shape_vec((1, seq_len), ids)?;
         let mask_arr = Array2::from_shape_vec((1, seq_len), mask)?;
-        // bge-m3 is XLM-RoBERTa under the hood — single segment, so token_type_ids
-        // is all zeros. The ONNX input is required nonetheless.
-        let type_arr = Array2::<i64>::zeros((1, seq_len));
 
-        let outputs = self.inner.session.run(ort::inputs![
+        let mut session = self
+            .inner
+            .session
+            .lock()
+            .map_err(|_| anyhow!("complexity model session mutex poisoned"))?;
+        let outputs = session.run(ort::inputs![
             "input_ids" => TensorRef::from_array_view(ids_arr.view())?,
             "attention_mask" => TensorRef::from_array_view(mask_arr.view())?,
-            "token_type_ids" => TensorRef::from_array_view(type_arr.view())?,
         ])?;
 
-        // bge-m3 ONNX outputs `last_hidden_state` of shape (1, seq_len, hidden).
-        // We CLS-pool: take position 0.
+        // The ONNX embedder outputs `last_hidden_state` of shape (1, seq_len, hidden).
+        // For multilingual-e5-large (and most XLM-R-based models) fastembed does
+        // attention-masked mean pooling, NO L2 normalization. We mirror that.
         let last_hidden = outputs
             .get("last_hidden_state")
             .ok_or_else(|| anyhow!("ONNX output is missing 'last_hidden_state'"))?;
@@ -242,16 +280,25 @@ impl ComplexityModel {
                 self.inner.embedder_dim
             );
         }
-        // CLS token = position 0 along the sequence axis.
-        let cls_view = tensor_view.slice(ndarray::s![0, 0, ..]);
-        let mut emb = Array1::from_iter(cls_view.iter().copied());
 
-        // bge-m3 outputs are unit-normalized in fastembed; do the same here.
-        let norm = emb.dot(&emb).sqrt();
-        if norm > 1e-12 {
-            emb.mapv_inplace(|v| v / norm);
+        let hidden_slice = tensor_view.slice(ndarray::s![0, .., ..]);
+        let mut sum = Array1::<f32>::zeros(hidden);
+        let mut mask_sum: f32 = 0.0;
+        for (t, &m) in mask_arr.row(0).iter().enumerate() {
+            if m == 0 {
+                continue;
+            }
+            let mf = m as f32;
+            mask_sum += mf;
+            for (h, &v) in hidden_slice.slice(ndarray::s![t, ..]).iter().enumerate() {
+                sum[h] += v * mf;
+            }
         }
-        Ok(emb)
+        if mask_sum <= 0.0 {
+            bail!("attention mask is all zeros");
+        }
+        sum.mapv_inplace(|v| v / mask_sum);
+        Ok(sum)
     }
 }
 
@@ -333,7 +380,7 @@ fn read_linear(
 }
 
 fn bytes_to_f32(bytes: &[u8]) -> Result<Vec<f32>> {
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         bail!("tensor byte length {} is not a multiple of 4", bytes.len());
     }
     let mut out = Vec::with_capacity(bytes.len() / 4);
@@ -395,7 +442,10 @@ pub fn route(model: &ComplexityModel, conversation: &Conversation) -> Option<Rou
             elapsed_ms: score.elapsed_ms,
         }),
         Err(e) => {
-            tracing::warn!("complexity scoring failed, defaulting to smart model: {:#}", e);
+            tracing::warn!(
+                "complexity scoring failed, defaulting to smart model: {:#}",
+                e
+            );
             None
         }
     }
@@ -439,10 +489,7 @@ mod tests {
             Message::user().with_text("now squared"),
         ]);
         let r = render_for_routing(&c).expect("some");
-        assert_eq!(
-            r,
-            "user: what is 2+2\nassistant: 4\n>>> user: now squared"
-        );
+        assert_eq!(r, "user: what is 2+2\nassistant: 4\n>>> user: now squared");
     }
 
     #[test]

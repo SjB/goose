@@ -16,8 +16,8 @@ use crate::providers::formats::openrouter as openrouter_format;
 use rmcp::model::Tool;
 
 pub const OPENROUTER_PROVIDER_NAME: &str = "openrouter";
-pub const OPENROUTER_DEFAULT_MODEL: &str = "anthropic/claude-sonnet-4";
-pub const OPENROUTER_DEFAULT_FAST_MODEL: &str = "google/gemini-2.5-flash";
+pub const OPENROUTER_DEFAULT_MODEL: &str = "anthropic/claude-opus-4.8";
+pub const OPENROUTER_DEFAULT_FAST_MODEL: &str = "nvidia/nemotron-3-nano-30b-a3b";
 pub const OPENROUTER_MODEL_PREFIX_ANTHROPIC: &str = "anthropic";
 
 // OpenRouter can run many models, we suggest the default
@@ -48,10 +48,7 @@ pub struct OpenRouterProvider {
 impl OpenRouterProvider {
     pub async fn from_env(model: ModelConfig) -> Result<Self> {
         let config = crate::config::Config::global();
-        let fast_model_name: String = config
-            .get_param("OPENROUTER_FAST_MODEL")
-            .unwrap_or_else(|_| OPENROUTER_DEFAULT_FAST_MODEL.to_string());
-        let model = model.with_fast(&fast_model_name, OPENROUTER_PROVIDER_NAME)?;
+        let model = model.with_fast(OPENROUTER_DEFAULT_FAST_MODEL, OPENROUTER_PROVIDER_NAME)?;
 
         let api_key: String = config.get_secret("OPENROUTER_API_KEY")?;
         let host: String = config

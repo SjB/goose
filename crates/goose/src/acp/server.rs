@@ -2355,9 +2355,15 @@ impl GooseAcpAgent {
             agent_client_protocol::Error::invalid_params().data("no active run to steer")
         })?;
         if active_run_id != expected_run_id {
-            return Err(agent_client_protocol::Error::invalid_params().data(format!(
-                "expected active run id `{expected_run_id}` but found `{active_run_id}`"
-            )));
+            return Err(
+                agent_client_protocol::Error::invalid_params().data(serde_json::json!({
+                    "message": format!(
+                        "expected active run id `{expected_run_id}` but found `{active_run_id}`"
+                    ),
+                    "expectedRunId": expected_run_id,
+                    "actualRunId": active_run_id,
+                })),
+            );
         }
         Ok(active_run_id.clone())
     }

@@ -167,6 +167,8 @@ pub struct GooseConfigSchema {
     pub gemini3_thinking_level: Option<String>,
     #[serde(rename = "GEMINI25_THINKING_BUDGET")]
     pub gemini25_thinking_budget: Option<i32>,
+    #[serde(rename = "GOOSE_THINKING_EFFORT")]
+    pub goose_thinking_effort: Option<String>,
 
     // === Security Settings ===
     #[serde(rename = "SECURITY_PROMPT_ENABLED")]
@@ -311,6 +313,8 @@ pub struct GooseConfigSchema {
     pub tetrate_host: Option<String>,
     #[serde(rename = "AVIAN_HOST")]
     pub avian_host: Option<String>,
+    #[serde(rename = "HF_HOST")]
+    pub hf_host: Option<String>,
 
     // === Provider Switching (lowercase keys) ===
     pub active_provider: Option<String>,
@@ -404,6 +408,7 @@ impl GooseConfigSchema {
         "ANTHROPIC_THINKING_BUDGET",
         "GEMINI3_THINKING_LEVEL",
         "GEMINI25_THINKING_BUDGET",
+        "GOOSE_THINKING_EFFORT",
         // Security Settings
         "SECURITY_PROMPT_ENABLED",
         "SECURITY_PROMPT_THRESHOLD",
@@ -460,6 +465,7 @@ impl GooseConfigSchema {
         "VENICE_MODELS_PATH",
         "TETRATE_HOST",
         "AVIAN_HOST",
+        "HF_HOST",
         // Provider Switching
         "active_provider",
         // Observability Settings
@@ -573,6 +579,7 @@ impl GooseConfigSchema {
             anthropic_thinking_budget: config.get_param("ANTHROPIC_THINKING_BUDGET").ok(),
             gemini3_thinking_level: config.get_param("GEMINI3_THINKING_LEVEL").ok(),
             gemini25_thinking_budget: config.get_param("GEMINI25_THINKING_BUDGET").ok(),
+            goose_thinking_effort: config.get_param("GOOSE_THINKING_EFFORT").ok(),
             security_prompt_enabled: config.get_param("SECURITY_PROMPT_ENABLED").ok(),
             security_prompt_threshold: config.get_param("SECURITY_PROMPT_THRESHOLD").ok(),
             security_prompt_classifier_enabled: config
@@ -641,6 +648,7 @@ impl GooseConfigSchema {
             venice_models_path: config.get_param("VENICE_MODELS_PATH").ok(),
             tetrate_host: config.get_param("TETRATE_HOST").ok(),
             avian_host: config.get_param("AVIAN_HOST").ok(),
+            hf_host: config.get_param("HF_HOST").ok(),
             active_provider: config.get_param("active_provider").ok(),
             otel_exporter_otlp_endpoint: config.get_param("otel_exporter_otlp_endpoint").ok(),
             otel_exporter_otlp_timeout: config.get_param("otel_exporter_otlp_timeout").ok(),
@@ -775,6 +783,7 @@ impl GooseConfigSchema {
         push_if_some!(self.anthropic_thinking_budget, "ANTHROPIC_THINKING_BUDGET");
         push_if_some!(self.gemini3_thinking_level, "GEMINI3_THINKING_LEVEL");
         push_if_some!(self.gemini25_thinking_budget, "GEMINI25_THINKING_BUDGET");
+        push_if_some!(self.goose_thinking_effort, "GOOSE_THINKING_EFFORT");
         push_if_some!(self.security_prompt_enabled, "SECURITY_PROMPT_ENABLED");
         push_if_some!(self.security_prompt_threshold, "SECURITY_PROMPT_THRESHOLD");
         push_if_some!(
@@ -865,6 +874,7 @@ impl GooseConfigSchema {
         push_if_some!(self.venice_models_path, "VENICE_MODELS_PATH");
         push_if_some!(self.tetrate_host, "TETRATE_HOST");
         push_if_some!(self.avian_host, "AVIAN_HOST");
+        push_if_some!(self.hf_host, "HF_HOST");
         push_if_some!(
             self.otel_exporter_otlp_endpoint,
             "otel_exporter_otlp_endpoint"

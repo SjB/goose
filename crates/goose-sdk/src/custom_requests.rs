@@ -1767,6 +1767,12 @@ pub struct ConfigSchemaDto {
         skip_serializing_if = "Option::is_none"
     )]
     pub gemini25_thinking_budget: Option<i32>,
+    #[serde(
+        rename = "GOOSE_THINKING_EFFORT",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub goose_thinking_effort: Option<String>,
 
     // === Security Settings ===
     #[serde(
@@ -2091,6 +2097,8 @@ pub struct ConfigSchemaDto {
         skip_serializing_if = "Option::is_none"
     )]
     pub avian_host: Option<String>,
+    #[serde(rename = "HF_HOST", default, skip_serializing_if = "Option::is_none")]
+    pub hf_host: Option<String>,
 
     // === Provider Switching (lowercase keys — no serde rename needed) ===
     #[serde(default, skip_serializing_if = "Option::is_none")]

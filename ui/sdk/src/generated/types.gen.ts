@@ -1162,6 +1162,7 @@ export type ConfigReadResponse_unstable = {
     ANTHROPIC_THINKING_BUDGET?: number | null;
     GEMINI3_THINKING_LEVEL?: string | null;
     GEMINI25_THINKING_BUDGET?: number | null;
+    GOOSE_THINKING_EFFORT?: string | null;
     SECURITY_PROMPT_ENABLED?: boolean | null;
     SECURITY_PROMPT_THRESHOLD?: number | null;
     SECURITY_PROMPT_CLASSIFIER_ENABLED?: boolean | null;
@@ -1216,6 +1217,7 @@ export type ConfigReadResponse_unstable = {
     VENICE_MODELS_PATH?: string | null;
     TETRATE_HOST?: string | null;
     AVIAN_HOST?: string | null;
+    HF_HOST?: string | null;
     active_provider?: string | null;
     otel_exporter_otlp_endpoint?: string | null;
     otel_exporter_otlp_timeout?: number | null;
@@ -1387,6 +1389,7 @@ export type ConfigWriteRequest_unstable = {
     ANTHROPIC_THINKING_BUDGET?: number | null;
     GEMINI3_THINKING_LEVEL?: string | null;
     GEMINI25_THINKING_BUDGET?: number | null;
+    GOOSE_THINKING_EFFORT?: string | null;
     SECURITY_PROMPT_ENABLED?: boolean | null;
     SECURITY_PROMPT_THRESHOLD?: number | null;
     SECURITY_PROMPT_CLASSIFIER_ENABLED?: boolean | null;
@@ -1441,6 +1444,7 @@ export type ConfigWriteRequest_unstable = {
     VENICE_MODELS_PATH?: string | null;
     TETRATE_HOST?: string | null;
     AVIAN_HOST?: string | null;
+    HF_HOST?: string | null;
     active_provider?: string | null;
     otel_exporter_otlp_endpoint?: string | null;
     otel_exporter_otlp_timeout?: number | null;

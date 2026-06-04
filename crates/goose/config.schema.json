@@ -583,6 +583,12 @@
         "null"
       ]
     },
+    "GOOSE_THINKING_EFFORT": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "GOOSE_TOOL_CALL_CUTOFF": {
       "type": [
         "integer",
@@ -594,6 +600,12 @@
     "GOOSE_TOOL_PAIR_SUMMARIZATION": {
       "type": [
         "boolean",
+        "null"
+      ]
+    },
+    "HF_HOST": {
+      "type": [
+        "string",
         "null"
       ]
     },

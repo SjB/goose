@@ -1488,6 +1488,10 @@ export const zConfigReadResponse_unstable = z.object({
         z.number().int().min(-2147483648, { message: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { message: 'Invalid value: Expected int32 to be <= 2147483647' }),
         z.null()
     ]).optional(),
+    GOOSE_THINKING_EFFORT: z.union([
+        z.string(),
+        z.null()
+    ]).optional(),
     SECURITY_PROMPT_ENABLED: z.union([
         z.boolean(),
         z.null()
@@ -1701,6 +1705,10 @@ export const zConfigReadResponse_unstable = z.object({
         z.null()
     ]).optional(),
     AVIAN_HOST: z.union([
+        z.string(),
+        z.null()
+    ]).optional(),
+    HF_HOST: z.union([
         z.string(),
         z.null()
     ]).optional(),
@@ -2001,6 +2009,10 @@ export const zConfigWriteRequest_unstable = z.object({
         z.number().int().min(-2147483648, { message: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { message: 'Invalid value: Expected int32 to be <= 2147483647' }),
         z.null()
     ]).optional(),
+    GOOSE_THINKING_EFFORT: z.union([
+        z.string(),
+        z.null()
+    ]).optional(),
     SECURITY_PROMPT_ENABLED: z.union([
         z.boolean(),
         z.null()
@@ -2214,6 +2226,10 @@ export const zConfigWriteRequest_unstable = z.object({
         z.null()
     ]).optional(),
     AVIAN_HOST: z.union([
+        z.string(),
+        z.null()
+    ]).optional(),
+    HF_HOST: z.union([
         z.string(),
         z.null()
     ]).optional(),

@@ -3081,6 +3081,12 @@
           ],
           "format": "int32"
         },
+        "GOOSE_THINKING_EFFORT": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "SECURITY_PROMPT_ENABLED": {
           "type": [
             "boolean",
@@ -3416,6 +3422,12 @@
           ]
         },
         "AVIAN_HOST": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "HF_HOST": {
           "type": [
             "string",
             "null"
@@ -4310,6 +4322,12 @@
           ],
           "format": "int32"
         },
+        "GOOSE_THINKING_EFFORT": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "SECURITY_PROMPT_ENABLED": {
           "type": [
             "boolean",
@@ -4645,6 +4663,12 @@
           ]
         },
         "AVIAN_HOST": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "HF_HOST": {
           "type": [
             "string",
             "null"

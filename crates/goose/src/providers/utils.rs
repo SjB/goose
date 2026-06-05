@@ -317,7 +317,7 @@ mod tests {
         let logs_dir = Paths::in_state_dir("logs");
         assert!(!logs_dir.exists(), "logs dir should not exist yet");
 
-        let log = RequestLog::start(&json!({"name": "test"}), &json!({"model": "test"}))
+        let log = RequestLog::start(json!({"name": "test"}), &json!({"model": "test"}))
             .expect("RequestLog::start should create missing logs dir");
         drop(log);
 

@@ -177,7 +177,7 @@ impl Provider for NanoGptProvider {
     ) -> Result<MessageStream, ProviderError> {
         let payload = create_request(
             ModelConfigParams {
-                model_name: &model_config.model_name.as_str(),
+                model_name: model_config.model_name.as_str(),
                 thinking_effort: model_config.thinking_effort(),
                 temperature: model_config.temperature,
                 max_tokens: model_config.max_tokens,

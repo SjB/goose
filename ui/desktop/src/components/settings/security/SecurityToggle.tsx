@@ -190,8 +190,12 @@ export const SecurityToggle = () => {
   const commandClassifierOverride = window.appConfig?.get(
     'SECURITY_COMMAND_CLASSIFIER_ENABLED_OVERRIDE'
   ) as string | undefined;
-  const isPromptOverridden = promptEnabledOverride === 'true';
-  const isCommandClassifierOverridden = commandClassifierOverride === 'true';
+  const isPromptOverridden =
+    promptEnabledOverride === 'true' || promptEnabledOverride === 'false';
+  const isCommandClassifierOverridden =
+    commandClassifierOverride === 'true' || commandClassifierOverride === 'false';
+  const promptOverrideValue = promptEnabledOverride === 'true';
+  const commandClassifierOverrideValue = commandClassifierOverride === 'true';
 
   const modelMapping = useMemo(() => {
     const mappingEnv = window.appConfig?.get('SECURITY_ML_MODEL_MAPPING') as string | undefined;
@@ -308,7 +312,7 @@ export const SecurityToggle = () => {
     await upsert('SECURITY_COMMAND_CLASSIFIER_TOKEN', token, true); // true = secret
   };
 
-  const effectiveEnabled = isPromptOverridden || enabled;
+  const effectiveEnabled = isPromptOverridden ? promptOverrideValue : enabled;
 
   return (
     <div className="space-y-4">
@@ -326,7 +330,7 @@ export const SecurityToggle = () => {
         </div>
         <div className={`flex items-center ${isPromptOverridden ? 'opacity-40' : ''}`}>
           <Switch
-            checked={effectiveEnabled}
+            checked={isPromptOverridden ? promptOverrideValue : enabled}
             onCheckedChange={handleToggle}
             disabled={isPromptOverridden}
             variant="mono"
@@ -405,7 +409,11 @@ export const SecurityToggle = () => {
                 className={`flex items-center ${isCommandClassifierOverridden ? 'opacity-40' : ''}`}
               >
                 <Switch
-                  checked={isCommandClassifierOverridden || effectiveCommandClassifierEnabled}
+                  checked={
+                    isCommandClassifierOverridden
+                      ? commandClassifierOverrideValue
+                      : effectiveCommandClassifierEnabled
+                  }
                   onCheckedChange={handleCommandClassifierToggle}
                   disabled={!effectiveEnabled || isCommandClassifierOverridden}
                   variant="mono"
@@ -415,7 +423,9 @@ export const SecurityToggle = () => {
 
             {hasCommandModel ? (
               effectiveEnabled &&
-              (isCommandClassifierOverridden || effectiveCommandClassifierEnabled) && (
+              (isCommandClassifierOverridden
+                ? commandClassifierOverrideValue
+                : effectiveCommandClassifierEnabled) && (
                 <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">
                   ✓ {intl.formatMessage(i18n.commandClassifierActive)}
                 </div>

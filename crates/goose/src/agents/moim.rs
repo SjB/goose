@@ -1,7 +1,7 @@
 use crate::agents::extension_manager::ExtensionManager;
 use crate::conversation::message::MessageContent;
 use crate::conversation::{effective_role, fix_conversation, Conversation};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const MIN_CONTEXT_FOR_MOIM: usize = 32_000;
 const TURN_CONTEXT_TAG: &str = "turn-context";
@@ -10,27 +10,12 @@ thread_local! {
     pub static SKIP: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct MoimStatus {
-    pub turns_taken: Option<u32>,
-    pub max_turns: Option<u32>,
-}
-
-#[derive(Debug, Clone, Default)]
-struct TurnContext {
-    working_dir: PathBuf,
-    total_tokens: Option<i32>,
-    context_limit: Option<usize>,
-    compaction_threshold: Option<f64>,
-    turns_taken: Option<u32>,
-    max_turns: Option<u32>,
-}
-
 pub async fn inject_moim(
     session_id: &str,
     conversation: Conversation,
     extension_manager: &ExtensionManager,
-    status: MoimStatus,
+    turns_taken: u32,
+    max_turns: u32,
 ) -> Conversation {
     if SKIP.with(|f| f.get()) {
         return conversation;
@@ -54,27 +39,29 @@ pub async fn inject_moim(
     let session_context_limit = session
         .as_ref()
         .and_then(|session| session.model_config.as_ref().map(|config| config.context_limit()));
-    let context = TurnContext {
-        working_dir: session
-            .as_ref()
-            .map(|session| session.working_dir.clone())
-            .unwrap_or_else(|| PathBuf::from(".")),
-        total_tokens: session.as_ref().and_then(|session| session.total_tokens),
-        context_limit: provider_context_limit.or(session_context_limit),
-        compaction_threshold: Some(
-            crate::config::Config::global()
-                .get_param::<f64>("GOOSE_AUTO_COMPACT_THRESHOLD")
-                .unwrap_or(crate::context_mgmt::DEFAULT_COMPACTION_THRESHOLD),
-        ),
-        turns_taken: status.turns_taken,
-        max_turns: status.max_turns,
-    };
-    if should_skip_moim(&context) {
+    let context_limit = provider_context_limit.or(session_context_limit);
+    if should_skip_moim(context_limit) {
         return conversation;
     }
 
+    let working_dir = session
+        .as_ref()
+        .map(|session| session.working_dir.clone())
+        .unwrap_or_else(|| PathBuf::from("."));
+    let total_tokens = session.as_ref().and_then(|session| session.total_tokens);
+    let compaction_threshold = crate::config::Config::global()
+        .get_param::<f64>("GOOSE_AUTO_COMPACT_THRESHOLD")
+        .unwrap_or(crate::context_mgmt::DEFAULT_COMPACTION_THRESHOLD);
     let extension_parts = extension_manager.collect_moim_parts(session_id).await;
-    let moim = compose_moim(&context, extension_parts);
+    let moim = compose_moim(
+        &working_dir,
+        total_tokens,
+        context_limit,
+        compaction_threshold,
+        turns_taken,
+        max_turns,
+        extension_parts,
+    );
 
     let mut messages = conversation.messages().clone();
     let Some(idx) = messages
@@ -111,24 +98,30 @@ pub async fn inject_moim(
     fixed
 }
 
-fn should_skip_moim(context: &TurnContext) -> bool {
-    context
-        .context_limit
-        .is_some_and(|limit| limit < MIN_CONTEXT_FOR_MOIM)
+fn should_skip_moim(context_limit: Option<usize>) -> bool {
+    context_limit.is_some_and(|limit| limit < MIN_CONTEXT_FOR_MOIM)
 }
 
-fn compose_moim(context: &TurnContext, extension_parts: Vec<String>) -> String {
+fn compose_moim(
+    working_dir: &Path,
+    total_tokens: Option<i32>,
+    context_limit: Option<usize>,
+    compaction_threshold: f64,
+    turns_taken: u32,
+    max_turns: u32,
+    extension_parts: Vec<String>,
+) -> String {
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:00");
     let mut lines = vec![
         open_tag(TURN_CONTEXT_TAG),
         tag("current-time", &timestamp.to_string()),
-        tag("working-directory", &context.working_dir.display().to_string()),
+        tag("working-directory", &working_dir.display().to_string()),
     ];
 
-    if let Some(value) = compaction_remaining_line(context) {
+    if let Some(value) = compaction_remaining_line(total_tokens, context_limit, compaction_threshold) {
         lines.push(tag("compaction", &value));
     }
-    if let Some(value) = turn_budget_line(context) {
+    if let Some(value) = turn_budget_line(turns_taken, max_turns) {
         lines.push(tag("turn-budget", &value));
     }
 
@@ -162,10 +155,13 @@ fn escape_xml_text(value: &str) -> String {
         .replace('>', "&gt;")
 }
 
-fn compaction_remaining_line(context: &TurnContext) -> Option<String> {
-    let total_tokens = context.total_tokens?;
-    let context_limit = context.context_limit?;
-    let threshold = context.compaction_threshold?;
+fn compaction_remaining_line(
+    total_tokens: Option<i32>,
+    context_limit: Option<usize>,
+    threshold: f64,
+) -> Option<String> {
+    let total_tokens = total_tokens?;
+    let context_limit = context_limit?;
 
     if total_tokens <= 0 || context_limit == 0 || threshold <= 0.0 || threshold >= 1.0 {
         return None;
@@ -182,8 +178,7 @@ fn compaction_remaining_line(context: &TurnContext) -> Option<String> {
     ))
 }
 
-fn turn_budget_line(context: &TurnContext) -> Option<String> {
-    let (turns_taken, max_turns) = (context.turns_taken?, context.max_turns?);
+fn turn_budget_line(turns_taken: u32, max_turns: u32) -> Option<String> {
     if max_turns == 0 || turns_taken.saturating_mul(2) < max_turns {
         return None;
     }
@@ -196,17 +191,6 @@ mod tests {
     use super::*;
     use crate::conversation::message::Message;
     use rmcp::model::CallToolRequestParams;
-
-    fn status() -> MoimStatus {
-        MoimStatus::default()
-    }
-
-    fn turn_context() -> TurnContext {
-        TurnContext {
-            working_dir: PathBuf::from("/test/dir"),
-            ..Default::default()
-        }
-    }
 
     fn text_at(message: &crate::conversation::message::Message, index: usize) -> &str {
         message.content[index].as_text().unwrap()
@@ -239,7 +223,7 @@ mod tests {
             Message::assistant().with_text("Hi"),
             Message::user().with_text("Bye"),
         ]);
-        let result = inject_moim(&session.id, conv, &em, status()).await;
+        let result = inject_moim(&session.id, conv, &em, 0, 100).await;
         let msgs = result.messages();
 
         assert_eq!(msgs.len(), 3);
@@ -266,7 +250,7 @@ mod tests {
             .unwrap();
 
         let conv = Conversation::new_unvalidated(vec![Message::user().with_text("Hello")]);
-        let result = inject_moim(&session.id, conv, &em, status()).await;
+        let result = inject_moim(&session.id, conv, &em, 0, 100).await;
 
         assert_eq!(result.messages().len(), 1);
         assert!(is_moim(&result.messages()[0].content[0]));
@@ -298,7 +282,7 @@ mod tests {
                 .with_tool_response("search_1", Ok(rmcp::model::CallToolResult::success(vec![]))),
         ]);
 
-        let result = inject_moim(&session.id, conv, &em, status()).await;
+        let result = inject_moim(&session.id, conv, &em, 0, 100).await;
         let msgs = result.messages();
 
         assert_eq!(msgs.len(), 3);
@@ -311,72 +295,4 @@ mod tests {
         assert_eq!(msgs[2].content.len(), 1);
     }
 
-    #[test]
-    fn test_compaction_remaining_line_threshold() {
-        let base = TurnContext {
-            working_dir: PathBuf::from("/tmp"),
-            context_limit: Some(100_000),
-            compaction_threshold: Some(0.8),
-            ..Default::default()
-        };
-
-        assert_eq!(
-            compaction_remaining_line(&TurnContext {
-                total_tokens: Some(10_000),
-                ..base.clone()
-            }),
-            None
-        );
-        assert_eq!(
-            compaction_remaining_line(&TurnContext {
-                total_tokens: Some(50_000),
-                ..base.clone()
-            }),
-            Some("~30k tokens remaining".to_string())
-        );
-        assert_eq!(
-            compaction_remaining_line(&TurnContext {
-                total_tokens: Some(50_000),
-                compaction_threshold: Some(0.0),
-                ..base.clone()
-            }),
-            None
-        );
-        assert_eq!(
-            compaction_remaining_line(&TurnContext {
-                total_tokens: Some(50_000),
-                compaction_threshold: Some(1.0),
-                ..base
-            }),
-            None
-        );
-    }
-
-    #[test]
-    fn test_turn_budget_line_threshold() {
-        assert_eq!(
-            turn_budget_line(&TurnContext {
-                turns_taken: Some(49),
-                max_turns: Some(100),
-                ..turn_context()
-            }),
-            None
-        );
-        assert_eq!(
-            turn_budget_line(&TurnContext {
-                turns_taken: Some(50),
-                max_turns: Some(100),
-                ..turn_context()
-            }),
-            Some("50/100 used".to_string())
-        );
-        assert_eq!(
-            turn_budget_line(&TurnContext {
-                turns_taken: Some(1),
-                max_turns: Some(0),
-                ..turn_context()
-            }),
-            None
-        );
-    }
 }

@@ -1768,10 +1768,8 @@ impl Agent {
                     &session_config.id,
                     conversation.clone(),
                     &self.extension_manager,
-                    super::moim::MoimStatus {
-                        turns_taken: Some(turns_taken),
-                        max_turns: Some(max_turns),
-                    },
+                    turns_taken,
+                    max_turns,
                 ).await;
 
                 let mut stream = Self::stream_response_from_provider(

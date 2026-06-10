@@ -2137,16 +2137,36 @@ impl Agent {
                                     let thinking_msg = Message::new(
                                         response.role.clone(),
                                         response.created,
-                                        thinking_content,
+                                        thinking_content.clone(),
                                     ).with_id(format!("msg_{}", Uuid::new_v4()));
                                     messages_to_add.push(thinking_msg);
                                 }
 
-                                // Collect reasoning content to attach to tool request messages
-                                let reasoning_content: Vec<MessageContent> = response.content.iter()
-                                    .filter(|c| matches!(c, MessageContent::Thinking(_)))
-                                    .cloned()
-                                    .collect();
+                                // When the current response has no reasoning (e.g. DeepSeek V4
+                                // tool-call responses), fall back to the last reasoning_content
+                                // from the conversation history so it can be echoed back.
+                                let reasoning_to_attach = if !thinking_content.is_empty() {
+                                    thinking_content
+                                } else {
+                                    let fallback = conversation.messages()
+                                        .iter()
+                                        .rev()
+                                        .find_map(|m| {
+                                            let reasoning: Vec<MessageContent> = m.content.iter()
+                                                .filter(|c| matches!(c, MessageContent::Thinking(_)))
+                                                .cloned()
+                                                .collect();
+                                            if reasoning.is_empty() { None } else { Some(reasoning) }
+                                        })
+                                        .unwrap_or_default();
+                                    if fallback.is_empty() {
+                                        debug!(
+                                            "No reasoning content in response or conversation history for tool call messages; \
+                                             this may cause errors with providers that require reasoning_content (e.g. DeepSeek)"
+                                        );
+                                    }
+                                    fallback
+                                };
 
                                 for request in frontend_requests.iter().chain(remaining_requests.iter()) {
                                     if request.tool_call.is_ok() {
@@ -2155,7 +2175,7 @@ impl Agent {
 
                                         // Providers like Kimi require reasoning_content on all assistant
                                         // messages with tool_calls when thinking mode is enabled.
-                                        for rc in &reasoning_content {
+                                        for rc in &reasoning_to_attach {
                                             request_msg = request_msg.with_content(rc.clone());
                                         }
 

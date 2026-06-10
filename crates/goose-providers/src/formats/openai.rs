@@ -183,7 +183,18 @@ pub fn format_messages_with_options(
     let mut pending_assistant_reasoning = String::new();
 
     for message in messages {
-        if options.preserve_thinking_context && message.role != Role::Assistant {
+        // Only clear carried-forward reasoning on genuine user turns, not
+        // tool-result messages which are part of the same assistant tool-calling
+        // turn.  Providers like DeepSeek require reasoning_content on every
+        // assistant message with tool_calls, even when the model produced no
+        // new reasoning this turn.
+        if options.preserve_thinking_context
+            && message.role != Role::Assistant
+            && !message
+                .content
+                .iter()
+                .any(|c| matches!(c, MessageContent::ToolResponse(_)))
+        {
             pending_assistant_reasoning.clear();
         }
 

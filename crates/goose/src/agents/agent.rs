@@ -2144,19 +2144,46 @@ impl Agent {
 
                                 // When the current response has no reasoning (e.g. DeepSeek V4
                                 // tool-call responses), fall back to the last reasoning_content
-                                // from the conversation history so it can be echoed back.
+                                // from the current tool-calling turn so it can be echoed back.
+                                // Stop at genuine user turns (non-tool-response user messages)
+                                // to match the boundary that format_messages_with_options uses.
+                                // Search messages_to_add first (not yet committed to conversation),
+                                // then fall through to conversation.messages().
                                 let reasoning_to_attach = if !thinking_content.is_empty() {
                                     thinking_content
                                 } else {
-                                    let fallback = conversation.messages()
+                                    let is_within_turn =
+                                        |m: &&Message| -> bool {
+                                            m.role == rmcp::model::Role::Assistant
+                                                || m.content
+                                                    .iter()
+                                                    .any(|c| matches!(c, MessageContent::ToolResponse(_)))
+                                        };
+                                    let extract_reasoning = |m: &Message| -> Option<Vec<MessageContent>> {
+                                        let reasoning: Vec<MessageContent> = m
+                                            .content
+                                            .iter()
+                                            .filter(|c| matches!(c, MessageContent::Thinking(_)))
+                                            .cloned()
+                                            .collect();
+                                        if reasoning.is_empty() {
+                                            None
+                                        } else {
+                                            Some(reasoning)
+                                        }
+                                    };
+                                    let fallback = messages_to_add
+                                        .messages()
                                         .iter()
                                         .rev()
-                                        .find_map(|m| {
-                                            let reasoning: Vec<MessageContent> = m.content.iter()
-                                                .filter(|c| matches!(c, MessageContent::Thinking(_)))
-                                                .cloned()
-                                                .collect();
-                                            if reasoning.is_empty() { None } else { Some(reasoning) }
+                                        .find_map(extract_reasoning)
+                                        .or_else(|| {
+                                            conversation
+                                                .messages()
+                                                .iter()
+                                                .rev()
+                                                .take_while(is_within_turn)
+                                                .find_map(extract_reasoning)
                                         })
                                         .unwrap_or_default();
                                     if fallback.is_empty() {

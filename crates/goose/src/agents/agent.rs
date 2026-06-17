@@ -2145,20 +2145,13 @@ impl Agent {
                                 // When the current response has no reasoning (e.g. DeepSeek V4
                                 // tool-call responses), fall back to the last reasoning_content
                                 // from the current tool-calling turn so it can be echoed back.
-                                // Stop at genuine user turns (non-tool-response user messages)
-                                // to match the boundary that format_messages_with_options uses.
-                                // Search messages_to_add first (not yet committed to conversation),
-                                // then fall through to conversation.messages().
+                                // Only search messages_to_add (not yet committed), not the
+                                // conversation — reasoning from a prior committed tool turn
+                                // should not be reused since the new call may depend on that
+                                // turn's results.
                                 let reasoning_to_attach = if !thinking_content.is_empty() {
                                     thinking_content
                                 } else {
-                                    let is_within_turn =
-                                        |m: &&Message| -> bool {
-                                            m.role == rmcp::model::Role::Assistant
-                                                || m.content
-                                                    .iter()
-                                                    .any(|c| matches!(c, MessageContent::ToolResponse(_)))
-                                        };
                                     let extract_reasoning = |m: &Message| -> Option<Vec<MessageContent>> {
                                         let reasoning: Vec<MessageContent> = m
                                             .content
@@ -2172,19 +2165,18 @@ impl Agent {
                                             Some(reasoning)
                                         }
                                     };
+                                    // Only search messages_to_add (current batch, not yet committed
+                                    // to conversation) for fallback reasoning. Do NOT search the
+                                    // conversation — reasoning from a prior committed tool turn
+                                    // should not be reused for a new tool call that may depend on
+                                    // the previous turn's results. Reusing it causes
+                                    // merge_split_tool_call_messages in the OpenAI formatter to
+                                    // incorrectly merge sequential tool calls into one message.
                                     let fallback = messages_to_add
                                         .messages()
                                         .iter()
                                         .rev()
                                         .find_map(extract_reasoning)
-                                        .or_else(|| {
-                                            conversation
-                                                .messages()
-                                                .iter()
-                                                .rev()
-                                                .take_while(is_within_turn)
-                                                .find_map(extract_reasoning)
-                                        })
                                         .unwrap_or_default();
                                     if fallback.is_empty() {
                                         debug!(
